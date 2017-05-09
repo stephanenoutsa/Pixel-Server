@@ -37,9 +37,20 @@ public class MyDBHandler {
                
     }
     
+    
+    
+    /**
+     * Start of methods for Jobs and Scholarship service
+     * 
+     * @param phone
+     * @param choice
+     * @param network
+     * @return 
+     */    
     // Method to add/update subscriber
-    public boolean addSubscriber(String phone, String choice) {
+    public boolean addSubscriber(String phone, String choice, String network) {
         boolean ok = true;
+        // Add the date the user subscribes
         
         if (subscriberExists(phone)) {
             /* Code to update subscriber's choice */
@@ -52,13 +63,98 @@ public class MyDBHandler {
     
     // Method to check if subscriber exists
     public boolean subscriberExists(String phone) {
-        boolean exists = false;
+        boolean exists = true;
         
         /* Code to check if subscriber exists and is currently subscribed */
         
         return exists;
     }
     
+    // Method to update a subscriber's preferred language
+    public boolean updateSubscriberLanguage(String phone, String lang) {
+        boolean ok = true;
+        
+        /* Code to update the subscriber's preferred language */
+        
+        return ok;
+    }
+    
+    // Method to update a subscriber's first time status
+    // Status is either "YES", "NO" or "null"
+    public boolean updateFirstTimeStatus(String phone, String status) {
+        boolean ok = true;
+        
+        /* Code to update the subscriber's first time status */
+        
+        return ok;
+    }
+    
+    // Method to update a subscriber's category
+    public boolean updateSubscriberCategory(String phone, String category) {
+        boolean ok = true;
+        
+        /* Code to update the subscriber's category */
+        
+        return ok;
+    }
+    
+    // Method to update a subscriber's career level
+    public boolean updateSubscriberLevel(String phone, String level) {
+        boolean ok = true;
+        
+        /* Code to update the subscriber's career level */
+        
+        return ok;
+    }
+    
+    // Method to update a subscriber's age
+    public boolean updateSubscriberAge(String phone, String age) {
+        boolean ok = true;
+        
+        /* Code to update the subscriber's age */
+        
+        return ok;
+    }
+    
+    // Method to update a subscriber's gender
+    public boolean updateSubscriberGender(String phone, String gender) {
+        boolean ok = true;
+        
+        /* Code to update the subscriber's gender */
+        
+        return ok;
+    }
+    
+    // Method to update a subscriber's town of residence
+    public boolean updateSubscriberTown(String phone, String town) {
+        boolean ok = true;
+        
+        /* Code to update the subscriber's town of residence */
+        
+        return ok;
+    }
+    
+    // Method to add a job
+    public String addJob(String job) {
+        /* Code to add a job to database */
+        return job;
+    }
+    
+    // Method to add a scholarship
+    public String addScholarship(String scholarship) {
+        /* Code to add a scholarship to database */
+        return scholarship;
+    }
+    /** End of methods for Jobs & Scholarships service */
+    
+    
+    
+    /**
+     * Start of methods for Parent Eye Service
+     * 
+     * @param phone
+     * @return 
+     */    
     // Method to verify if a phone number belongs to a parent or guardian
     public boolean isParent(String phone) {
         boolean ok = true;
@@ -98,6 +194,7 @@ public class MyDBHandler {
          */
         
         return ok;
-    }
+    }    
+    /** End of methods for Parent Eye Service */
     
 }
