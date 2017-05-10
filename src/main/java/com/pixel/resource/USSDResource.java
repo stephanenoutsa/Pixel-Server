@@ -250,7 +250,7 @@ public class USSDResource {
                                             + "3 Marketing\n"
                                             + "4 Comptabilite\n"
                                             + "5 Finance\n"
-                                            + "6 Resources Humaines\n"
+                                            + "6 Ressources Humaines\n"
                                             + "7 Gestion";
                                     
                                     break;
@@ -262,13 +262,13 @@ public class USSDResource {
                                             + "3 Marketing\n"
                                             + "4 Comptabilite\n"
                                             + "5 Finance\n"
-                                            + "6 Resources Humaines\n"
+                                            + "6 Ressources Humaines\n"
                                             + "7 Gestion";
                                     
                                     break;
                                     
                                 case "77":
-                                    response = "CON Veuillez choisir un champ a modifier\n"
+                                    response = "CON Veuillez choisir un champ a modifier:\n"
                                             + "1 Langue\n"
                                             + "2 Categorie\n"
                                             + "3 Niveau\n"
@@ -637,12 +637,12 @@ public class USSDResource {
                                     switch (catChoice) {
                                         case "1":
                                             /* Code to fetch list of IT jobs and list them */
-                                            response = "IT jobs";
+                                            response = "END IT jobs";
                                             break;
                                             
                                         case "2":
                                             /* Code to fetch list of Engineering jobs and list them */
-                                            response = "Engineering jobs";
+                                            response = "END Engineering jobs";
                                             break;
                                             
                                         case "3":
@@ -780,7 +780,7 @@ public class USSDResource {
                                     break;
                                     
                                 default:
-                                    
+                                    response = "END Invalid choice. Please try again.";
                                     
                                     break;
                             }
@@ -788,7 +788,158 @@ public class USSDResource {
                             break;
                             
                         default:
-                            
+                            switch (serviceChoice) {
+                                case "1":
+                                    switch (catChoice) {
+                                        case "1":
+                                            /* Code to fetch list of IT jobs and list them */
+                                            response = "END Offres en Informatique";
+                                            break;
+                                            
+                                        case "2":
+                                            /* Code to fetch list of Engineering jobs and list them */
+                                            response = "END Offres en Ingenierie";
+                                            break;
+                                            
+                                        case "3":
+                                            /* Code to fetch list of Marketing jobs and list them */
+                                            response = "END Offres en Marketing";
+                                            break;
+                                            
+                                        case "4":
+                                            /* Code to fetch list of Accounting jobs and list them */
+                                            response = "END Offres en Comptabilite";
+                                            break;
+                                            
+                                        case "5":
+                                            /* Code to fetch list of Finance jobs and list them */
+                                            response = "END Offres en Finance";
+                                            break;
+                                            
+                                        case "6":
+                                            /* Code to fetch list of HR jobs and list them */
+                                            response = "END Offres en Ressources Humaines";
+                                            break;
+                                            
+                                        case "7":
+                                            /* Code to fetch list of Management jobs and list them */
+                                            response = "END Offres en Gestion";
+                                            break;
+                                            
+                                        default:
+                                            response = "END Choix invalide. Veuillez reessayer";
+                                            break;
+                                    }
+                                    
+                                    break;
+                                    
+                                case "2":
+                                    switch (catChoice) {
+                                        case "1":
+                                            /* Code to fetch list of IT scholarships and list them */
+                                            response = "END Bourses en Informatique";
+                                            break;
+                                            
+                                        case "2":
+                                            /* Code to fetch list of Engineering scholarships and list them */
+                                            response = "END Bourses en Ingenierie";
+                                            break;
+                                            
+                                        case "3":
+                                            /* Code to fetch list of Marketing scholarships and list them */
+                                            response = "END Bourses en Marketing";
+                                            break;
+                                            
+                                        case "4":
+                                            /* Code to fetch list of Accounting scholarships and list them */
+                                            response = "END Bourses en Comptabilite";
+                                            break;
+                                            
+                                        case "5":
+                                            /* Code to fetch list of Finance scholarships and list them */
+                                            response = "END Bourses en Finance";
+                                            break;
+                                            
+                                        case "6":
+                                            /* Code to fetch list of HR scholarships and list them */
+                                            response = "END Bourses en Ressources Humaines";
+                                            break;
+                                            
+                                        case "7":
+                                            /* Code to fetch list of Management scholarships and list them */
+                                            response = "END Bourses en Gestion";
+                                            break;
+                                            
+                                        default:
+                                            response = "END Choix invalide. Veuillez reessayer";
+                                            break;
+                                    }
+                                    
+                                    break;
+                                    
+                                case "77":
+                                    switch (catChoice) {
+                                        case "1":
+                                            response = "CON Veuillez choisir votre langue de preference.\n"
+                                                    + "Please select your preferred language.\n\n"
+                                                    + "1. Francais\n"
+                                                    + "2. English";
+                                            
+                                            break;
+                                            
+                                        case "2":
+                                            response = "CON Veuillez choisir une categorie:\n"
+                                                    + "1 Informatique\n"
+                                                    + "2 Ingenierie\n"
+                                                    + "3 Marketing\n"
+                                                    + "4 Comptabilite\n"
+                                                    + "5 Finance\n"
+                                                    + "6 Ressources Humaines\n"
+                                                    + "7 Gestion";
+                                            
+                                            break;
+                                            
+                                        case "3":
+                                            response = "CON Veuillez choisir votre niveau:\n"
+                                                    + "1 Stage\n"
+                                                    + "2 Entree\n"
+                                                    + "3 Associe\n"
+                                                    + "4 Haute direction\n"
+                                                    + "5 Expert";
+                                            
+                                            break;
+                                            
+                                        case "4":
+                                            response = "CON Veuillez entrer votre age s\'il vous plait:";
+                                            
+                                            break;
+                                            
+                                        case "5":
+                                            response = "CON Veuillez choisir votre sexe:\n"
+                                                    + "1 Homme\n"
+                                                    + "2 Femme";
+                                            
+                                            break;
+                                            
+                                        case "6":
+                                            response = "CON Veuillez entrer votre ville de residence:\n"
+                                                    + "(ex. Bamenda, Douala, Buea, etc)";
+                                            
+                                            break;
+                                            
+                                        default:
+                                            response = "END Choix invalide. Veuillez reessayer.";
+                                            
+                                            break;
+                                    }
+                                    
+                                    break;
+                                    
+                                default:
+                                    response = "END Choix invalide. Veuillez reessayer.";
+                                    
+                                    break;
+                            }
                             
                             break;
                     }
