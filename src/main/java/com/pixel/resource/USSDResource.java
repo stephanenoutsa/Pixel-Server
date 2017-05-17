@@ -64,26 +64,28 @@ public class USSDResource {
      * @return 
      */
     @GET
-    @Path("j-s")
+    @Path("j-s/mtn")
     public String getJSParams(@Context UriInfo uriInfo) {
         MultivaluedMap<String, String> queryParams = uriInfo.getQueryParameters();
         
-        String phone = queryParams.getFirst("MSISDN");
+        String number = queryParams.getFirst("MSISDN");
         String ussdString = queryParams.getFirst("USSD_STRING");
         String serviceCode = queryParams.getFirst("serviceCode");
         
+        String network = "MTN";
+        
         String[] lvl = ussdString.split("\\*");
-        String[] level = new String[8];
+        String[] level = new String[7];
         
         /** Level definitions
          * 
          * level[0] == preferredLanguage / serviceChoice
          * level[1] == proceedChoice / categoryChoice
          * level[2] == categoryChoice / lastChoice
-         * level[3] == levelChoice
+         * level[3] == experienceChoice
          * level[4] == age
          * level[5] == gender
-         * level[6] == town
+         * level[6] == region
          * 
          */        
         level[0] = lvl[0];
@@ -117,464 +119,180 @@ public class USSDResource {
         } catch (ArrayIndexOutOfBoundsException e) {
             level[6] = "";
         }
-        try {
-            level[7] = lvl[7];
-        } catch (ArrayIndexOutOfBoundsException e) {
-            level[7] = "";
-        }
         
         String response = "";
         
         try {            
             System.out.println("String is: " + ussdString);
             System.out.println("Service Code is: " + serviceCode);
-            System.out.println("Phone is: " + phone);
+            System.out.println("Phone is: " + number);
             
-            if (ussdString.equals("")) {
-                
-                if(dbHandler.subscriberExists(phone)) {                    
-                    // Determine if it is user's first time on platform
-                    /* Code to get user's first time status */
-                    boolean first = true; // This is just a placeholder
+            String service;
+            
+            switch (serviceCode) {
+                case "*123*1#":
+                    // User subscribes to jobs service
+                    service = "JOBS";
+                    dbHandler.addSubscriber(number, service, network);
                     
-                    if (first) {
-                        response = "CON Veuillez choisir votre langue de preference.\n"
-                                + "Please select your preferred language.\n\n"
-                                + "1. Francais\n"
-                                + "2. English";
-                    } else {
-                        // Determine preferred language and display corresponding menu
-                        /* Code to get user's preferred language */
-                        String lang = "FR"; // This is just a placeholder
-                        
-                        switch (lang) {
-                            case "FR":
-                                response = "CON Veuillez choisir le service auquel vous "
-                                        + "voulez acceder:\n"
-                                        + "1 Offres d\'emplois\n"
-                                        + "2 Bourses scolaires\n\n"
-                                        + "77 Mon compte";
-                                
-                                break;
-                                
-                            case "EN":
-                                response = "CON Please choose a service to access:\n"
-                                        + "1 Job offers\n"
-                                        + "2 Scholarship opportunities\n\n"
-                                        + "77 My Account";
-                                
-                                break;
-                                
-                            default:
-                                response = "CON Veuillez choisir le service auquel vous "
-                                        + "voulez acceder:\n"
-                                        + "1 Offres d\'emplois\n"
-                                        + "2 Bourses scolaires\n\n"
-                                        + "77 Mon compte";
-                                
-                                break;
+                    response = "END You have successfully subscribed to the Jobs service!\n"
+                            + "Please dial *123# and submit the required information so "
+                            + "that we can send you job offers that best suit your profile.\n\n"
+                            + "Votre souscription a ete effectuee avec succes!\n"
+                            + "Veuillez interroger le code *123# and entrez les informations "
+                            + "requises afin que nous puissions vous fournir des offres "
+                            + "d\'emploi qui vous correspondent.";
+                    
+                    break;
+                    
+                case "*123*2#":
+                    // User subscribes to scholarships service
+                    service = "SCHOLARSHIPS";
+                    dbHandler.addSubscriber(number, service, network);
+                    
+                    response = "END You have successfully subscribed to the Scholarships service!\n"
+                            + "Please dial *123# and submit the required information so "
+                            + "that we can send you opportunities that best suit your profile.\n\n"
+                            + "Votre souscription a ete effectuee avec succes!\n"
+                            + "Veuillez interroger le code *123# and entrez les informations "
+                            + "requises afin que nous puissions vous fournir des alertes "
+                            + "qui vous correspondent.";
+                    
+                    break;
+                    
+                case "*123*0#":
+                    // User unsubscribes from service
+                    dbHandler.updateSubscribeStatus(number, "UNSUBSCRIBED");
+                    
+                    response = "END You have successfully unsubscribed from the service.\n"
+                            + "Vous vous etes desinscrit avec succes.";
+                    
+                    break;
+                    
+                case "*123#":
+                    // User attempts to access platform
+                    if (ussdString.equals("")) {
+                
+                        if(dbHandler.userExists(number)) {                    
+                            // Determine if it is user's first time on platform
+                            boolean first = dbHandler.isFirstTime(number);
+
+                            if (first) {
+                                response = "CON Veuillez choisir votre langue de preference.\n"
+                                        + "Please select your preferred language.\n\n"
+                                        + "1. Francais\n"
+                                        + "2. English";
+                            } else {
+                                // Determine preferred language and display corresponding menu
+                                String lang = dbHandler.getPreferredLang(number);
+
+                                switch (lang) {
+                                    case "FR":
+                                        response = "CON Veuillez choisir le service auquel vous "
+                                                + "voulez acceder:\n"
+                                                + "1 Offres d\'emplois\n"
+                                                + "2 Bourses scolaires\n\n"
+                                                + "77 Mon compte";
+
+                                        break;
+
+                                    case "EN":
+                                        response = "CON Please choose a service to access:\n"
+                                                + "1 Job offers\n"
+                                                + "2 Scholarship opportunities\n\n"
+                                                + "77 My Account";
+
+                                        break;
+
+                                    default:
+                                        response = "CON Veuillez choisir le service auquel vous "
+                                                + "voulez acceder:\n"
+                                                + "1 Offres d\'emplois\n"
+                                                + "2 Bourses scolaires\n\n"
+                                                + "77 Mon compte";
+
+                                        break;
+                                }
+                            }
+                        } else {
+                            response = "END Subscribe to our jobs service by dialing "
+                                    + "*123*1#, or to our scholarships service by dialing "
+                                    + "*123*2#.\n"
+                                    + "Entrez *123*1# pour recevoir des offres d\'emploi "
+                                    + "ou *123*2# pour recevoir des alertes de bourses "
+                                    + "scolaires.\n"
+                                    + "(150frs/7jrs)";
                         }
                     }
-                } else {
-                    response = "END Subscribe to our service by sending a message to 8040:\n"
-                            + "\"JOBS\" to receive job offers\n"
-                            + "\"SCHOLAR\" to receive scholarship alerts\n"
-                            + "\"LOVE\" to follow up your pregnan[cy or your child under the age"
-                            + "of 6 months.\n"
-                            + "(150frs/week)";
-                }
-            }
-            
-            if (!level[0].isEmpty() && !level[0].equals("") && level[1].isEmpty()) {
-                // Determine if it is user's first time on platform
-                /* Code to get user's first time status */
-                boolean first = true; // This is just a placeholder
 
-                if (first) {
-                    // Update user's language preference
-                    String langChoice = level[0];
-                    String lang;
-                    
-                    switch (langChoice) {
-                        case "1":
-                            lang = "FR";
-                            
-                            // Faire un choix de catégorie d'alerte
-                            response = "CON Afin de pouvoir mieux vous servir nous avons "
-                                    + "besoin de certaines informations.\n"
-                                    + "NB: Informations a ne fournir qu\'une seule fois!\n\n"
-                                    + "1 Continuer\n"
-                                    + "2 Annuler";
-                            
-                            break;
-                            
-                        case "2":
-                            lang = "EN";
-                    
-                            // Ask user to choose an alert category
-                            response = "CON In order to serve you better, we need some "
-                                    + "more information.\n"
-                                    + "NB: This is a one time process!\n\n"
-                                    + "1 Proceed\n"
-                                    + "2 Cancel";
-                            
-                            break;
-                            
-                        default:
-                            lang = "FR";
-                            
-                            // Faire un choix de catégorie d'alerte
-                            response = "CON Afin de pouvoir mieux vous servir nous avons "
-                                    + "besoin de certaines informations.\n"
-                                    + "NB: Informations a ne fournir qu\'une seule fois!\n\n"
-                                    + "1 Continuer\n"
-                                    + "2 Annuler";
-                            
-                            break;
-                    }
-                    
-                    dbHandler.updateSubscriberLanguage(phone, lang);
-                } else {
-                    // If they're not accessing the platform for the first time
-                    /* Code to get the user's preferred language */
-                    String lang = "FR";
-                    String serviceChoice = level[0];
-                    
-                    switch (lang) {
-                        case "FR":
-                            switch (serviceChoice) {
-                                case "1":
-                                    response = "CON Veuillez choisir une categorie:\n"
-                                            + "1 Informatique\n"
-                                            + "2 Ingenierie\n"
-                                            + "3 Marketing\n"
-                                            + "4 Comptabilite\n"
-                                            + "5 Finance\n"
-                                            + "6 Ressources Humaines\n"
-                                            + "7 Gestion";
-                                    
-                                    break;
-                                    
-                                case "2":
-                                    response = "CON Veuillez choisir une categorie:\n"
-                                            + "1 Informatique\n"
-                                            + "2 Ingenierie\n"
-                                            + "3 Marketing\n"
-                                            + "4 Comptabilite\n"
-                                            + "5 Finance\n"
-                                            + "6 Ressources Humaines\n"
-                                            + "7 Gestion";
-                                    
-                                    break;
-                                    
-                                case "77":
-                                    response = "CON Veuillez choisir un champ a modifier:\n"
-                                            + "1 Langue\n"
-                                            + "2 Categorie\n"
-                                            + "3 Niveau\n"
-                                            + "4 Age\n"
-                                            + "5 Sexe\n"
-                                            + "6 Ville";
-                                    
-                                    break;
-                                    
-                                default:
-                                    response = "END Choix invalide. Veuillez reessayer.";
-                                    
-                                    break;
-                            }
-                            
-                            break;
-                            
-                        case "EN":
-                            switch (serviceChoice) {
-                                case "1":
-                                    response = "CON Please select a category:\n"
-                                            + "1 IT\n"
-                                            + "2 Engineering\n"
-                                            + "3 Marketing\n"
-                                            + "4 Accounting\n"
-                                            + "5 Finance\n"
-                                            + "6 Human Resources\n"
-                                            + "7 Management";
-                                    
-                                    break;
-                                    
-                                case "2":
-                                    response = "CON Please select a category:\n"
-                                            + "1 IT\n"
-                                            + "2 Engineering\n"
-                                            + "3 Marketing\n"
-                                            + "4 Accounting\n"
-                                            + "5 Finance\n"
-                                            + "6 Human Resources\n"
-                                            + "7 Management";
-                                    
-                                    break;
-                                    
-                                case "77":
-                                    response = "CON Please select a field to edit:\n"
-                                            + "1 Language\n"
-                                            + "2 Category\n"
-                                            + "3 Level\n"
-                                            + "4 Age\n"
-                                            + "5 Gender\n"
-                                            + "6 Town";
-                                    
-                                    break;
-                                    
-                                default:
-                                    response = "END Invalid choice. Please try again.";
-                                    
-                                    break;
-                            }
-                            
-                            break;
-                            
-                        default:
-                            switch (serviceChoice) {
-                                case "1":
-                                    response = "CON Veuillez choisir une categorie:\n"
-                                            + "1 Informatique\n"
-                                            + "2 Ingenierie\n"
-                                            + "3 Marketing\n"
-                                            + "4 Comptabilite\n"
-                                            + "5 Finance\n"
-                                            + "6 Resources Humaines\n"
-                                            + "7 Gestion";
-                                    
-                                    break;
-                                    
-                                case "2":
-                                    response = "CON Veuillez choisir une categorie:\n"
-                                            + "1 Informatique\n"
-                                            + "2 Ingenierie\n"
-                                            + "3 Marketing\n"
-                                            + "4 Comptabilite\n"
-                                            + "5 Finance\n"
-                                            + "6 Resources Humaines\n"
-                                            + "7 Gestion";
-                                    
-                                    break;
-                                    
-                                case "77":
-                                    response = "CON Veuillez choisir un champ a modifier\n"
-                                            + "1 Langue\n"
-                                            + "2 Categorie\n"
-                                            + "3 Niveau\n"
-                                            + "4 Age\n"
-                                            + "5 Sexe\n"
-                                            + "6 Ville";
-                                    
-                                    break;
-                                    
-                                default:
-                                    response = "END Choix invalide. Veuillez reessayer.";
-                                    
-                                    break;
-                            }
-                            
-                            break;
-                    }
-                }
-            }
-            
-            else if (!level[1].isEmpty() && !level[1].equals("") && level[2].isEmpty()) {
-                // Determine if it is user's first time on platform
-                /* Code to get user's first time status */
-                boolean first = true; // This is just a placeholder
+                    if (!level[0].isEmpty() && !level[0].equals("") && level[1].isEmpty()) {
+                        // Determine if it is user's first time on platform
+                        boolean first = dbHandler.isFirstTime(number);
 
-                if (first) {
-                    String langChoice = level[0];
-                    String proceedChoice = level[1];
-                    
-                    switch (langChoice) {
-                        case "1":
-                            // Subscriber prefers French language
-                            switch (proceedChoice) {
+                        if (first) {
+                            // Update user's language preference
+                            String langChoice = level[0];
+                            String lang;
+
+                            switch (langChoice) {
                                 case "1":
-                                    // Display categories in French
-                                    response = "CON Veuillez choisir une categorie:\n"
-                                            + "1 Informatique\n"
-                                            + "2 Ingenierie\n"
-                                            + "3 Marketing\n"
-                                            + "4 Comptabilite\n"
-                                            + "5 Finance\n"
-                                            + "6 Ressources Humaines\n"
-                                            + "7 Gestion";
-                                    
+                                    lang = "FR";
+
+                                    // Faire un choix de catégorie d'alerte
+                                    response = "CON Afin de pouvoir mieux vous servir nous avons "
+                                            + "besoin de certaines informations.\n"
+                                            + "NB: Informations a ne fournir qu\'une seule fois!\n\n"
+                                            + "1 Continuer\n"
+                                            + "2 Annuler";
+
                                     break;
-                                    
+
                                 case "2":
-                                    // Bye bye message
-                                    response = "END Merci d\'utiliser notre service.";
-                                    
-                                    // Update first time status
-                                    dbHandler.updateFirstTimeStatus(phone, "NO");
+                                    lang = "EN";
+
+                                    // Ask user to choose an alert category
+                                    response = "CON In order to serve you better, we need some "
+                                            + "more information.\n"
+                                            + "NB: This is a one time process!\n\n"
+                                            + "1 Proceed\n"
+                                            + "2 Cancel";
+
+                                    break;
+
+                                default:
+                                    lang = "FR";
+
+                                    // Faire un choix de catégorie d'alerte
+                                    response = "CON Afin de pouvoir mieux vous servir nous avons "
+                                            + "besoin de certaines informations.\n"
+                                            + "NB: Informations a ne fournir qu\'une seule fois!\n\n"
+                                            + "1 Continuer\n"
+                                            + "2 Annuler";
+
+                                    break;
                             }
-                            
-                            break;
-                            
-                        case "2":
-                            // Subscriber prefers English language
-                            switch (proceedChoice) {
-                                case "1":
-                                    // Display categories in English
-                                    response = "CON Select a category:\n"
-                                            + "1 IT\n"
-                                            + "2 Engineering\n"
-                                            + "3 Marketing\n"
-                                            + "4 Accounting\n"
-                                            + "5 Finance\n"
-                                            + "6 Human Resources\n"
-                                            + "7 Management";
-                                    
-                                    break;
-                                    
-                                case "2":
-                                    // Bye bye message
-                                    response = "END Thank you for using our service.";
-                                    
-                                    // Update first time status
-                                    dbHandler.updateFirstTimeStatus(phone, "NO");
-                            }
-                            
-                            break;
-                            
-                        default:
-                            // French is the default language
-                            switch (proceedChoice) {
-                                case "1":
-                                    // Display categories in French
-                                    response = "CON Veuillez choisir une categorie:\n"
-                                            + "1 Informatique\n"
-                                            + "2 Ingenierie\n"
-                                            + "3 Marketing\n"
-                                            + "4 Comptabilite\n"
-                                            + "5 Finance\n"
-                                            + "6 Ressources Humaines\n"
-                                            + "7 Gestion";
-                                    
-                                    break;
-                                    
-                                case "2":
-                                    // Bye bye message
-                                    response = "END Merci d\'utiliser notre service.";
-                                    
-                                    // Update first time status
-                                    dbHandler.updateFirstTimeStatus(phone, "NO");
-                            }
-                            
-                            break;
-                    }
-                } else {
-                    // If they're not accessing the platform for the first time
-                    /* Code to get the user's preferred language */
-                    String lang = "FR";
-                    String serviceChoice = level[0];
-                    String catChoice = level[1];
-                    
-                    switch (lang) {
-                        case "FR":
-                            switch (serviceChoice) {
-                                case "1":
-                                    switch (catChoice) {
+
+                            dbHandler.updateSubscriberLanguage(number, lang);
+                        } else {
+                            // If they're not accessing the platform for the first time
+                            String lang = dbHandler.getPreferredLang(number);
+                            String serviceChoice = level[0];
+
+                            switch (lang) {
+                                case "FR":
+                                    switch (serviceChoice) {
                                         case "1":
-                                            /* Code to fetch list of IT jobs and list them */
-                                            response = "END Offres en Informatique";
+                                            response = "CON Veuillez choisir une categorie:\n"
+                                                    + "1 Informatique\n"
+                                                    + "2 Ingenierie\n"
+                                                    + "3 Marketing\n"
+                                                    + "4 Comptabilite\n"
+                                                    + "5 Finance\n"
+                                                    + "6 Ressources Humaines\n"
+                                                    + "7 Gestion";
+
                                             break;
-                                            
-                                        case "2":
-                                            /* Code to fetch list of Engineering jobs and list them */
-                                            response = "END Offres en Ingenierie";
-                                            break;
-                                            
-                                        case "3":
-                                            /* Code to fetch list of Marketing jobs and list them */
-                                            response = "END Offres en Marketing";
-                                            break;
-                                            
-                                        case "4":
-                                            /* Code to fetch list of Accounting jobs and list them */
-                                            response = "END Offres en Comptabilite";
-                                            break;
-                                            
-                                        case "5":
-                                            /* Code to fetch list of Finance jobs and list them */
-                                            response = "END Offres en Finance";
-                                            break;
-                                            
-                                        case "6":
-                                            /* Code to fetch list of HR jobs and list them */
-                                            response = "END Offres en Ressources Humaines";
-                                            break;
-                                            
-                                        case "7":
-                                            /* Code to fetch list of Management jobs and list them */
-                                            response = "END Offres en Gestion";
-                                            break;
-                                            
-                                        default:
-                                            response = "END Choix invalide. Veuillez reessayer";
-                                            break;
-                                    }
-                                    
-                                    break;
-                                    
-                                case "2":
-                                    switch (catChoice) {
-                                        case "1":
-                                            /* Code to fetch list of IT scholarships and list them */
-                                            response = "END Bourses en Informatique";
-                                            break;
-                                            
-                                        case "2":
-                                            /* Code to fetch list of Engineering scholarships and list them */
-                                            response = "END Bourses en Ingenierie";
-                                            break;
-                                            
-                                        case "3":
-                                            /* Code to fetch list of Marketing scholarships and list them */
-                                            response = "END Bourses en Marketing";
-                                            break;
-                                            
-                                        case "4":
-                                            /* Code to fetch list of Accounting scholarships and list them */
-                                            response = "END Bourses en Comptabilite";
-                                            break;
-                                            
-                                        case "5":
-                                            /* Code to fetch list of Finance scholarships and list them */
-                                            response = "END Bourses en Finance";
-                                            break;
-                                            
-                                        case "6":
-                                            /* Code to fetch list of HR scholarships and list them */
-                                            response = "END Bourses en Ressources Humaines";
-                                            break;
-                                            
-                                        case "7":
-                                            /* Code to fetch list of Management scholarships and list them */
-                                            response = "END Bourses en Gestion";
-                                            break;
-                                            
-                                        default:
-                                            response = "END Choix invalide. Veuillez reessayer";
-                                            break;
-                                    }
-                                    
-                                    break;
-                                    
-                                case "77":
-                                    switch (catChoice) {
-                                        case "1":
-                                            response = "CON Veuillez choisir votre langue de preference.\n"
-                                                    + "Please select your preferred language.\n\n"
-                                                    + "1. Francais\n"
-                                                    + "2. English";
-                                            
-                                            break;
-                                            
+
                                         case "2":
                                             response = "CON Veuillez choisir une categorie:\n"
                                                     + "1 Informatique\n"
@@ -584,153 +302,42 @@ public class USSDResource {
                                                     + "5 Finance\n"
                                                     + "6 Ressources Humaines\n"
                                                     + "7 Gestion";
-                                            
+
                                             break;
-                                            
-                                        case "3":
-                                            response = "CON Veuillez choisir votre niveau:\n"
-                                                    + "1 Stage\n"
-                                                    + "2 Entree\n"
-                                                    + "3 Associe\n"
-                                                    + "4 Haute direction\n"
-                                                    + "5 Expert";
-                                            
+
+                                        case "77":
+                                            response = "CON Veuillez choisir un champ a modifier:\n"
+                                                    + "1 Langue\n"
+                                                    + "2 Categorie\n"
+                                                    + "3 Experience\n"
+                                                    + "4 Age\n"
+                                                    + "5 Sexe\n"
+                                                    + "6 Region";
+
                                             break;
-                                            
-                                        case "4":
-                                            response = "CON Veuillez entrer votre age s\'il vous plait:";
-                                            
-                                            break;
-                                            
-                                        case "5":
-                                            response = "CON Veuillez choisir votre sexe:\n"
-                                                    + "1 Homme\n"
-                                                    + "2 Femme";
-                                            
-                                            break;
-                                            
-                                        case "6":
-                                            response = "CON Veuillez entrer votre ville de residence:\n"
-                                                    + "(ex. Bamenda, Douala, Buea, etc)";
-                                            
-                                            break;
-                                            
+
                                         default:
                                             response = "END Choix invalide. Veuillez reessayer.";
-                                            
+
                                             break;
                                     }
-                                    
+
                                     break;
-                                    
-                                default:
-                                    response = "END Choix invalide. Veuillez reessayer.";
-                                    
-                                    break;
-                            }
-                            
-                            break;
-                            
-                        case "EN":
-                            switch (serviceChoice) {
-                                case "1":
-                                    switch (catChoice) {
+
+                                case "EN":
+                                    switch (serviceChoice) {
                                         case "1":
-                                            /* Code to fetch list of IT jobs and list them */
-                                            response = "END IT jobs";
+                                            response = "CON Please select a category:\n"
+                                                    + "1 IT\n"
+                                                    + "2 Engineering\n"
+                                                    + "3 Marketing\n"
+                                                    + "4 Accounting\n"
+                                                    + "5 Finance\n"
+                                                    + "6 Human Resources\n"
+                                                    + "7 Management";
+
                                             break;
-                                            
-                                        case "2":
-                                            /* Code to fetch list of Engineering jobs and list them */
-                                            response = "END Engineering jobs";
-                                            break;
-                                            
-                                        case "3":
-                                            /* Code to fetch list of Marketing jobs and list them */
-                                            response = "END Marketing jobs";
-                                            break;
-                                            
-                                        case "4":
-                                            /* Code to fetch list of Accounting jobs and list them */
-                                            response = "END Accounting jobs";
-                                            break;
-                                            
-                                        case "5":
-                                            /* Code to fetch list of Finance jobs and list them */
-                                            response = "END Finance jobs";
-                                            break;
-                                            
-                                        case "6":
-                                            /* Code to fetch list of HR jobs and list them */
-                                            response = "END HR jobs";
-                                            break;
-                                            
-                                        case "7":
-                                            /* Code to fetch list of Management jobs and list them */
-                                            response = "END Management jobs";
-                                            break;
-                                            
-                                        default:
-                                            response = "END Invalid choice. Please try again.";
-                                            break;
-                                    }
-                                    
-                                    break;
-                                    
-                                case "2":
-                                    switch (catChoice) {
-                                        case "1":
-                                            /* Code to fetch list of IT scholarships and list them */
-                                            response = "END IT scholarships";
-                                            break;
-                                            
-                                        case "2":
-                                            /* Code to fetch list of Engineering scholarships and list them */
-                                            response = "END Engineering scholarships";
-                                            break;
-                                            
-                                        case "3":
-                                            /* Code to fetch list of Marketing scholarships and list them */
-                                            response = "END Marketing scholarships";
-                                            break;
-                                            
-                                        case "4":
-                                            /* Code to fetch list of Accounting scholarships and list them */
-                                            response = "END Accounting scholarships";
-                                            break;
-                                            
-                                        case "5":
-                                            /* Code to fetch list of Finance scholarships and list them */
-                                            response = "END Finance scholarships";
-                                            break;
-                                            
-                                        case "6":
-                                            /* Code to fetch list of HR scholarships and list them */
-                                            response = "END HR scholarships";
-                                            break;
-                                            
-                                        case "7":
-                                            /* Code to fetch list of Management scholarships and list them */
-                                            response = "END Management scholarships";
-                                            break;
-                                            
-                                        default:
-                                            response = "END Invalid choice. Please try again.";
-                                            break;
-                                    }
-                                    
-                                    break;
-                                    
-                                case "77":
-                                    switch (catChoice) {
-                                        case "1":
-                                            response = "CON Veuillez choisir votre langue de preference.\n"
-                                                    + "Please select your preferred language.\n\n"
-                                                    + "1. Francais\n"
-                                                    + "2. English";
-                                            
-                                            break;
-                                            
+
                                         case "2":
                                             response = "CON Please select a category:\n"
                                                     + "1 IT\n"
@@ -740,154 +347,90 @@ public class USSDResource {
                                                     + "5 Finance\n"
                                                     + "6 Human Resources\n"
                                                     + "7 Management";
-                                            
+
                                             break;
-                                            
-                                        case "3":
-                                            response = "CON Please select a level:\n"
-                                                    + "1 Internship\n"
-                                                    + "2 Entry level\n"
-                                                    + "3 Associate\n"
-                                                    + "4 Senior Management\n"
-                                                    + "5 Expert";
-                                            
+
+                                        case "77":
+                                            response = "CON Please select a field to edit:\n"
+                                                    + "1 Language\n"
+                                                    + "2 Category\n"
+                                                    + "3 Experience\n"
+                                                    + "4 Age\n"
+                                                    + "5 Gender\n"
+                                                    + "6 Region";
+
                                             break;
-                                            
-                                        case "4":
-                                            response = "CON Please enter your age:";
-                                            
-                                            break;
-                                            
-                                        case "5":
-                                            response = "CON Please select your gender:\n"
-                                                    + "1 Male\n"
-                                                    + "2 Female";
-                                            
-                                            break;
-                                            
-                                        case "6":
-                                            response = "CON Please enter your town of residence:\n"
-                                                    + "(e.g. Bamenda, Douala, Buea, etc)";
-                                            
-                                            break;
-                                            
+
                                         default:
                                             response = "END Invalid choice. Please try again.";
-                                            
+
                                             break;
                                     }
-                                    
+
                                     break;
-                                    
+
                                 default:
-                                    response = "END Invalid choice. Please try again.";
-                                    
+                                    switch (serviceChoice) {
+                                        case "1":
+                                            response = "CON Veuillez choisir une categorie:\n"
+                                                    + "1 Informatique\n"
+                                                    + "2 Ingenierie\n"
+                                                    + "3 Marketing\n"
+                                                    + "4 Comptabilite\n"
+                                                    + "5 Finance\n"
+                                                    + "6 Resources Humaines\n"
+                                                    + "7 Gestion";
+
+                                            break;
+
+                                        case "2":
+                                            response = "CON Veuillez choisir une categorie:\n"
+                                                    + "1 Informatique\n"
+                                                    + "2 Ingenierie\n"
+                                                    + "3 Marketing\n"
+                                                    + "4 Comptabilite\n"
+                                                    + "5 Finance\n"
+                                                    + "6 Resources Humaines\n"
+                                                    + "7 Gestion";
+
+                                            break;
+
+                                        case "77":
+                                            response = "CON Veuillez choisir un champ a modifier\n"
+                                                    + "1 Langue\n"
+                                                    + "2 Categorie\n"
+                                                    + "3 Experience\n"
+                                                    + "4 Age\n"
+                                                    + "5 Sexe\n"
+                                                    + "6 Region";
+
+                                            break;
+
+                                        default:
+                                            response = "END Choix invalide. Veuillez reessayer.";
+
+                                            break;
+                                    }
+
                                     break;
                             }
-                            
-                            break;
-                            
-                        default:
-                            switch (serviceChoice) {
+                        }
+                    }
+
+                    else if (!level[1].isEmpty() && !level[1].equals("") && level[2].isEmpty()) {
+                        // Determine if it is user's first time on platform
+                        boolean first = dbHandler.isFirstTime(number);
+
+                        if (first) {
+                            String langChoice = level[0];
+                            String proceedChoice = level[1];
+
+                            switch (langChoice) {
                                 case "1":
-                                    switch (catChoice) {
+                                    // Subscriber prefers French language
+                                    switch (proceedChoice) {
                                         case "1":
-                                            /* Code to fetch list of IT jobs and list them */
-                                            response = "END Offres en Informatique";
-                                            break;
-                                            
-                                        case "2":
-                                            /* Code to fetch list of Engineering jobs and list them */
-                                            response = "END Offres en Ingenierie";
-                                            break;
-                                            
-                                        case "3":
-                                            /* Code to fetch list of Marketing jobs and list them */
-                                            response = "END Offres en Marketing";
-                                            break;
-                                            
-                                        case "4":
-                                            /* Code to fetch list of Accounting jobs and list them */
-                                            response = "END Offres en Comptabilite";
-                                            break;
-                                            
-                                        case "5":
-                                            /* Code to fetch list of Finance jobs and list them */
-                                            response = "END Offres en Finance";
-                                            break;
-                                            
-                                        case "6":
-                                            /* Code to fetch list of HR jobs and list them */
-                                            response = "END Offres en Ressources Humaines";
-                                            break;
-                                            
-                                        case "7":
-                                            /* Code to fetch list of Management jobs and list them */
-                                            response = "END Offres en Gestion";
-                                            break;
-                                            
-                                        default:
-                                            response = "END Choix invalide. Veuillez reessayer";
-                                            break;
-                                    }
-                                    
-                                    break;
-                                    
-                                case "2":
-                                    switch (catChoice) {
-                                        case "1":
-                                            /* Code to fetch list of IT scholarships and list them */
-                                            response = "END Bourses en Informatique";
-                                            break;
-                                            
-                                        case "2":
-                                            /* Code to fetch list of Engineering scholarships and list them */
-                                            response = "END Bourses en Ingenierie";
-                                            break;
-                                            
-                                        case "3":
-                                            /* Code to fetch list of Marketing scholarships and list them */
-                                            response = "END Bourses en Marketing";
-                                            break;
-                                            
-                                        case "4":
-                                            /* Code to fetch list of Accounting scholarships and list them */
-                                            response = "END Bourses en Comptabilite";
-                                            break;
-                                            
-                                        case "5":
-                                            /* Code to fetch list of Finance scholarships and list them */
-                                            response = "END Bourses en Finance";
-                                            break;
-                                            
-                                        case "6":
-                                            /* Code to fetch list of HR scholarships and list them */
-                                            response = "END Bourses en Ressources Humaines";
-                                            break;
-                                            
-                                        case "7":
-                                            /* Code to fetch list of Management scholarships and list them */
-                                            response = "END Bourses en Gestion";
-                                            break;
-                                            
-                                        default:
-                                            response = "END Choix invalide. Veuillez reessayer";
-                                            break;
-                                    }
-                                    
-                                    break;
-                                    
-                                case "77":
-                                    switch (catChoice) {
-                                        case "1":
-                                            response = "CON Veuillez choisir votre langue de preference.\n"
-                                                    + "Please select your preferred language.\n\n"
-                                                    + "1. Francais\n"
-                                                    + "2. English";
-                                            
-                                            break;
-                                            
-                                        case "2":
+                                            // Display categories in French
                                             response = "CON Veuillez choisir une categorie:\n"
                                                     + "1 Informatique\n"
                                                     + "2 Ingenierie\n"
@@ -896,983 +439,1824 @@ public class USSDResource {
                                                     + "5 Finance\n"
                                                     + "6 Ressources Humaines\n"
                                                     + "7 Gestion";
-                                            
+
                                             break;
-                                            
-                                        case "3":
-                                            response = "CON Veuillez choisir votre niveau:\n"
-                                                    + "1 Stage\n"
-                                                    + "2 Entree\n"
-                                                    + "3 Associe\n"
-                                                    + "4 Haute direction\n"
-                                                    + "5 Expert";
-                                            
-                                            break;
-                                            
-                                        case "4":
-                                            response = "CON Veuillez entrer votre age s\'il vous plait:";
-                                            
-                                            break;
-                                            
-                                        case "5":
-                                            response = "CON Veuillez choisir votre sexe:\n"
-                                                    + "1 Homme\n"
-                                                    + "2 Femme";
-                                            
-                                            break;
-                                            
-                                        case "6":
-                                            response = "CON Veuillez entrer votre ville de residence:\n"
-                                                    + "(ex. Bamenda, Douala, Buea, etc)";
+
+                                        case "2":
+                                            // Bye bye message
+                                            response = "END Merci d\'utiliser notre service.";
+
+                                            // Update first time status
+                                            dbHandler.updateFirstTimeStatus(number, "NO");
                                             
                                             break;
                                             
                                         default:
-                                            response = "END Choix invalide. Veuillez reessayer.";
+                                            // Bye bye message
+                                            response = "END Merci d\'utiliser notre service.";
+
+                                            // Update first time status
+                                            dbHandler.updateFirstTimeStatus(number, "NO");
                                             
                                             break;
                                     }
-                                    
+
                                     break;
-                                    
+
+                                case "2":
+                                    // Subscriber prefers English language
+                                    switch (proceedChoice) {
+                                        case "1":
+                                            // Display categories in English
+                                            response = "CON Select a category:\n"
+                                                    + "1 IT\n"
+                                                    + "2 Engineering\n"
+                                                    + "3 Marketing\n"
+                                                    + "4 Accounting\n"
+                                                    + "5 Finance\n"
+                                                    + "6 Human Resources\n"
+                                                    + "7 Management";
+
+                                            break;
+
+                                        case "2":
+                                            // Bye bye message
+                                            response = "END Thank you for using our service.";
+
+                                            // Update first time status
+                                            dbHandler.updateFirstTimeStatus(number, "NO");
+                                            
+                                            break;
+                                            
+                                        default:
+                                            // Bye bye message
+                                            response = "END Thank you for using our service.";
+
+                                            // Update first time status
+                                            dbHandler.updateFirstTimeStatus(number, "NO");
+                                            
+                                            break;
+                                    }
+
+                                    break;
+
                                 default:
-                                    response = "END Choix invalide. Veuillez reessayer.";
-                                    
+                                    // French is the default language
+                                    switch (proceedChoice) {
+                                        case "1":
+                                            // Display categories in French
+                                            response = "CON Veuillez choisir une categorie:\n"
+                                                    + "1 Informatique\n"
+                                                    + "2 Ingenierie\n"
+                                                    + "3 Marketing\n"
+                                                    + "4 Comptabilite\n"
+                                                    + "5 Finance\n"
+                                                    + "6 Ressources Humaines\n"
+                                                    + "7 Gestion";
+
+                                            break;
+
+                                        case "2":
+                                            // Bye bye message
+                                            response = "END Merci d\'utiliser notre service.";
+
+                                            // Update first time status
+                                            dbHandler.updateFirstTimeStatus(number, "NO");
+                                            
+                                            break;
+                                            
+                                        default:
+                                            // Bye bye message
+                                            response = "END Merci d\'utiliser notre service.";
+
+                                            // Update first time status
+                                            dbHandler.updateFirstTimeStatus(number, "NO");
+                                            
+                                            break;
+                                    }
+
                                     break;
                             }
-                            
-                            break;
-                    }
-                }
-            }
-            
-            else if (!level[2].isEmpty() && !level[2].equals("") && level[3].isEmpty()) {
-                // Determine if it is user's first time on platform
-                /* Code to get user's first time status */
-                boolean first = true; // This is just a placeholder
+                        } else {
+                            // If they're not accessing the platform for the first time
+                            String lang = dbHandler.getPreferredLang(number);
+                            String serviceChoice = level[0];
+                            String catChoice = level[1];
 
-                if (first) {
-                    String langChoice = level[0];
-                    String categoryChoice = level[2];
-                    String category;
-                    
-                    switch (categoryChoice) {
-                        case "1":
-                            category = "Informatique";
-                            break;
-                            
-                        case "2":
-                            category = "Engineering";
-                            break;
-                            
-                        case "3":
-                            category = "Marketing";
-                            break;
-                            
-                        case "4":
-                            category = "Accounting";
-                            break;
-                            
-                        case "5":
-                            category = "Finance";
-                            break;
-                            
-                        case "6":
-                            category = "Human Resources";
-                            break;
-                            
-                        case "7":
-                            category = "Management";
-                            break;
-                            
-                        default:
-                            category = "";
-                            break;
+                            switch (lang) {
+                                case "FR":
+                                    switch (serviceChoice) {
+                                        case "1":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    /* Code to fetch IT jobs of the day */
+                                                    response = "END Offre en Informatique";
+                                                    break;
+
+                                                case "2":
+                                                    /* Code to fetch Engineering job of the day */
+                                                    response = "END Offre en Ingenierie";
+                                                    break;
+
+                                                case "3":
+                                                    /* Code to fetch Marketing job of the day */
+                                                    response = "END Offre en Marketing";
+                                                    break;
+
+                                                case "4":
+                                                    /* Code to fetch Accounting job of the day */
+                                                    response = "END Offre en Comptabilite";
+                                                    break;
+
+                                                case "5":
+                                                    /* Code to fetch Finance job of the day */
+                                                    response = "END Offre en Finance";
+                                                    break;
+
+                                                case "6":
+                                                    /* Code to fetch HR job of the day */
+                                                    response = "END Offre en Ressources Humaines";
+                                                    break;
+
+                                                case "7":
+                                                    /* Code to fetch Management job of the day */
+                                                    response = "END Offre en Gestion";
+                                                    break;
+
+                                                default:
+                                                    response = "END Choix invalide. Veuillez reessayer";
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        case "2":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    /* Code to fetch IT scholarship of the day*/
+                                                    response = "END Bourse en Informatique";
+                                                    break;
+
+                                                case "2":
+                                                    /* Code to fetch Engineering scholarship of the day */
+                                                    response = "END Bourse en Ingenierie";
+                                                    break;
+
+                                                case "3":
+                                                    /* Code to fetch Marketing scholarship of the day */
+                                                    response = "END Bourse en Marketing";
+                                                    break;
+
+                                                case "4":
+                                                    /* Code to fetch Accounting scholarship of the day */
+                                                    response = "END Bourse en Comptabilite";
+                                                    break;
+
+                                                case "5":
+                                                    /* Code to fetch Finance scholarship of the day */
+                                                    response = "END Bourse en Finance";
+                                                    break;
+
+                                                case "6":
+                                                    /* Code to fetch HR scholarship of the day */
+                                                    response = "END Bourse en Ressources Humaines";
+                                                    break;
+
+                                                case "7":
+                                                    /* Code to fetch Management scholarship of the day */
+                                                    response = "END Bourse en Gestion";
+                                                    break;
+
+                                                default:
+                                                    response = "END Choix invalide. Veuillez reessayer";
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        case "77":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    response = "CON Veuillez choisir votre langue de preference.\n"
+                                                            + "Please select your preferred language.\n\n"
+                                                            + "1. Francais\n"
+                                                            + "2. English";
+
+                                                    break;
+
+                                                case "2":
+                                                    response = "CON Veuillez choisir une categorie:\n"
+                                                            + "1 Informatique\n"
+                                                            + "2 Ingenierie\n"
+                                                            + "3 Marketing\n"
+                                                            + "4 Comptabilite\n"
+                                                            + "5 Finance\n"
+                                                            + "6 Ressources Humaines\n"
+                                                            + "7 Gestion";
+
+                                                    break;
+
+                                                case "3":
+                                                    response = "CON Veuillez choisir votre Experience:\n"
+                                                            + "1. 0-2 ans\n"
+                                                            + "2. 2-4 ans\n"
+                                                            + "3. 4-7 ans\n"
+                                                            + "4. >7 ans";
+
+                                                    break;
+
+                                                case "4":
+                                                    response = "CON Veuillez choisir votre group d\'age:\n"
+                                                            + "1. 15-20 ans\n"
+                                                            + "2. 20-30 ans\n"
+                                                            + "3. 30-40 ans\n"
+                                                            + "4. >40 ans";
+
+                                                    break;
+
+                                                case "5":
+                                                    response = "CON Veuillez choisir votre sexe:\n"
+                                                            + "1 Homme\n"
+                                                            + "2 Femme";
+
+                                                    break;
+
+                                                case "6":
+                                                    response = "CON Veuillez choisir votre region de residence:\n"
+                                                            + "1 AD\n"
+                                                            + "2 CE\n"
+                                                            + "3 E\n"
+                                                            + "4 EN\n"
+                                                            + "5 LT\n"
+                                                            + "6 N\n"
+                                                            + "7 NO\n"
+                                                            + "8 OU\n"
+                                                            + "9 SU\n"
+                                                            + "10 SO";
+
+                                                    break;
+
+                                                default:
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        default:
+                                            response = "END Choix invalide. Veuillez reessayer.";
+
+                                            break;
+                                    }
+
+                                    break;
+
+                                case "EN":
+                                    switch (serviceChoice) {
+                                        case "1":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    /* Code to fetch IT job of the day */
+                                                    response = "END IT job";
+                                                    break;
+
+                                                case "2":
+                                                    /* Code to fetch Engineering job of the day */
+                                                    response = "END Engineering job";
+                                                    break;
+
+                                                case "3":
+                                                    /* Code to fetch Marketing job of the day */
+                                                    response = "END Marketing job";
+                                                    break;
+
+                                                case "4":
+                                                    /* Code to fetch Accounting job of the day */
+                                                    response = "END Accounting job";
+                                                    break;
+
+                                                case "5":
+                                                    /* Code to fetch Finance job of the day */
+                                                    response = "END Finance job";
+                                                    break;
+
+                                                case "6":
+                                                    /* Code to fetch HR job of the day */
+                                                    response = "END HR job";
+                                                    break;
+
+                                                case "7":
+                                                    /* Code to fetch Management job of the day */
+                                                    response = "END Management job";
+                                                    break;
+
+                                                default:
+                                                    response = "END Invalid choice. Please try again.";
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        case "2":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    /* Code to fetch IT scholarship of the day */
+                                                    response = "END IT scholarship";
+                                                    break;
+
+                                                case "2":
+                                                    /* Code to fetch Engineering scholarship of the day */
+                                                    response = "END Engineering scholarship";
+                                                    break;
+
+                                                case "3":
+                                                    /* Code to fetch Marketing scholarship of the day */
+                                                    response = "END Marketing scholarship";
+                                                    break;
+
+                                                case "4":
+                                                    /* Code to fetch Accounting scholarship of the day */
+                                                    response = "END Accounting scholarship";
+                                                    break;
+
+                                                case "5":
+                                                    /* Code to fetch Finance scholarship of the day */
+                                                    response = "END Finance scholarship";
+                                                    break;
+
+                                                case "6":
+                                                    /* Code to fetch HR scholarship of the day */
+                                                    response = "END HR scholarship";
+                                                    break;
+
+                                                case "7":
+                                                    /* Code to fetch Management scholarship of the day */
+                                                    response = "END Management scholarship";
+                                                    break;
+
+                                                default:
+                                                    response = "END Invalid choice. Please try again.";
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        case "77":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    response = "CON Veuillez choisir votre langue de preference.\n"
+                                                            + "Please select your preferred language.\n\n"
+                                                            + "1. Francais\n"
+                                                            + "2. English";
+
+                                                    break;
+
+                                                case "2":
+                                                    response = "CON Please select a category:\n"
+                                                            + "1 IT\n"
+                                                            + "2 Engineering\n"
+                                                            + "3 Marketing\n"
+                                                            + "4 Accounting\n"
+                                                            + "5 Finance\n"
+                                                            + "6 Human Resources\n"
+                                                            + "7 Management";
+
+                                                    break;
+
+                                                case "3":
+                                                    response = "CON Please select a level:\n"
+                                                            + "1. 0-2 yrs\n"
+                                                            + "2. 2-4 yrs\n"
+                                                            + "3. 4-7 yrs\n"
+                                                            + "4. >7 yrs";
+
+                                                    break;
+
+                                                case "4":
+                                                    response = "CON Please select your age group:\n"
+                                                            + "1. 15-20\n"
+                                                            + "2. 20-30\n"
+                                                            + "3. 30-40\n"
+                                                            + "4. >40";
+
+                                                    break;
+
+                                                case "5":
+                                                    response = "CON Please select your gender:\n"
+                                                            + "1 Male\n"
+                                                            + "2 Female";
+
+                                                    break;
+
+                                                case "6":
+                                                    response = "CON Please select your region of residence:\n"
+                                                            + "1 AD\n"
+                                                            + "2 CE\n"
+                                                            + "3 E\n"
+                                                            + "4 FN\n"
+                                                            + "5 LT\n"
+                                                            + "6 N\n"
+                                                            + "7 NW\n"
+                                                            + "8 W\n"
+                                                            + "9 S\n"
+                                                            + "10 SW";
+
+                                                    break;
+
+                                                default:
+                                                    response = "END Invalid choice. Please try again.";
+
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        default:
+                                            response = "END Invalid choice. Please try again.";
+
+                                            break;
+                                    }
+
+                                    break;
+
+                                default:
+                                    switch (serviceChoice) {
+                                        case "1":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    /* Code to fetch IT jobs of the day */
+                                                    response = "END Offre en Informatique";
+                                                    break;
+
+                                                case "2":
+                                                    /* Code to fetch Engineering job of the day */
+                                                    response = "END Offre en Ingenierie";
+                                                    break;
+
+                                                case "3":
+                                                    /* Code to fetch Marketing job of the day */
+                                                    response = "END Offre en Marketing";
+                                                    break;
+
+                                                case "4":
+                                                    /* Code to fetch Accounting job of the day */
+                                                    response = "END Offre en Comptabilite";
+                                                    break;
+
+                                                case "5":
+                                                    /* Code to fetch Finance job of the day */
+                                                    response = "END Offre en Finance";
+                                                    break;
+
+                                                case "6":
+                                                    /* Code to fetch HR job of the day */
+                                                    response = "END Offre en Ressources Humaines";
+                                                    break;
+
+                                                case "7":
+                                                    /* Code to fetch Management job of the day */
+                                                    response = "END Offre en Gestion";
+                                                    break;
+
+                                                default:
+                                                    response = "END Choix invalide. Veuillez reessayer";
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        case "2":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    /* Code to fetch IT scholarship of the day*/
+                                                    response = "END Bourse en Informatique";
+                                                    break;
+
+                                                case "2":
+                                                    /* Code to fetch Engineering scholarship of the day */
+                                                    response = "END Bourse en Ingenierie";
+                                                    break;
+
+                                                case "3":
+                                                    /* Code to fetch Marketing scholarship of the day */
+                                                    response = "END Bourse en Marketing";
+                                                    break;
+
+                                                case "4":
+                                                    /* Code to fetch Accounting scholarship of the day */
+                                                    response = "END Bourse en Comptabilite";
+                                                    break;
+
+                                                case "5":
+                                                    /* Code to fetch Finance scholarship of the day */
+                                                    response = "END Bourse en Finance";
+                                                    break;
+
+                                                case "6":
+                                                    /* Code to fetch HR scholarship of the day */
+                                                    response = "END Bourse en Ressources Humaines";
+                                                    break;
+
+                                                case "7":
+                                                    /* Code to fetch Management scholarship of the day */
+                                                    response = "END Bourse en Gestion";
+                                                    break;
+
+                                                default:
+                                                    response = "END Choix invalide. Veuillez reessayer";
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        case "77":
+                                            switch (catChoice) {
+                                                case "1":
+                                                    response = "CON Veuillez choisir votre langue de preference.\n"
+                                                            + "Please select your preferred language.\n\n"
+                                                            + "1. Francais\n"
+                                                            + "2. English";
+
+                                                    break;
+
+                                                case "2":
+                                                    response = "CON Veuillez choisir une categorie:\n"
+                                                            + "1 Informatique\n"
+                                                            + "2 Ingenierie\n"
+                                                            + "3 Marketing\n"
+                                                            + "4 Comptabilite\n"
+                                                            + "5 Finance\n"
+                                                            + "6 Ressources Humaines\n"
+                                                            + "7 Gestion";
+
+                                                    break;
+
+                                                case "3":
+                                                    response = "CON Veuillez choisir votre Experience:\n"
+                                                            + "1. 0-2 ans\n"
+                                                            + "2. 2-4 ans\n"
+                                                            + "3. 4-7 ans\n"
+                                                            + "4. >7 ans";
+
+                                                    break;
+
+                                                case "4":
+                                                    response = "CON Veuillez choisir votre group d\'age:\n"
+                                                            + "1. 15-20 ans\n"
+                                                            + "2. 20-30 ans\n"
+                                                            + "3. 30-40 ans\n"
+                                                            + "4. >40 ans";
+
+                                                    break;
+
+                                                case "5":
+                                                    response = "CON Veuillez choisir votre sexe:\n"
+                                                            + "1 Homme\n"
+                                                            + "2 Femme";
+
+                                                    break;
+
+                                                case "6":
+                                                    response = "CON Veuillez choisir votre region de residence:\n"
+                                                            + "1 AD\n"
+                                                            + "2 CE\n"
+                                                            + "3 E\n"
+                                                            + "4 EN\n"
+                                                            + "5 LT\n"
+                                                            + "6 N\n"
+                                                            + "7 NO\n"
+                                                            + "8 OU\n"
+                                                            + "9 SU\n"
+                                                            + "10 SO";
+
+                                                    break;
+
+                                                default:
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+
+                                                    break;
+                                            }
+
+                                            break;
+
+                                        default:
+                                            response = "END Choix invalide. Veuillez reessayer.";
+
+                                            break;
+                                    }
+
+                                    break;
+                            }
+                        }
                     }
-                    
-                    switch (langChoice) {
-                        case "1":
-                            // Subscriber prefers French language
-                            if (!category.equals("")) {
-                                response = "CON Veuillez choisir votre niveau:\n"
-                                        + "1 Stage\n"
-                                        + "2 Entree\n"
-                                        + "3 Associe\n"
-                                        + "4 Haute Direction\n"
-                                        + "5 Expert";
-                            } else {
-                                response = "END Categorie choisie invalide. Veuillez reessayer.";
+
+                    else if (!level[2].isEmpty() && !level[2].equals("") && level[3].isEmpty()) {
+                        // Determine if it is user's first time on platform
+                        boolean first = dbHandler.isFirstTime(number);
+
+                        if (first) {
+                            String langChoice = level[0];
+                            String categoryChoice = level[2];
+                            String category;
+
+                            switch (categoryChoice) {
+                                case "1":
+                                    category = "Informatique";
+                                    break;
+
+                                case "2":
+                                    category = "Engineering";
+                                    break;
+
+                                case "3":
+                                    category = "Marketing";
+                                    break;
+
+                                case "4":
+                                    category = "Accounting";
+                                    break;
+
+                                case "5":
+                                    category = "Finance";
+                                    break;
+
+                                case "6":
+                                    category = "Human Resources";
+                                    break;
+
+                                case "7":
+                                    category = "Management";
+                                    break;
+
+                                default:
+                                    category = "";
+                                    break;
                             }
-                            
-                            break;
-                            
-                        case "2":
-                            // Subscriber prefers English language
-                            if (!category.equals("")) {
-                                response = "CON Select a career level:\n"
-                                        + "1 Internship\n"
-                                        + "2 Entry Level\n"
-                                        + "3 Associate\n"
-                                        + "4 Senior Management\n"
-                                        + "5 Expert";
-                            } else {
-                                response = "END Selected category is invalid. Please try again.";
+
+                            switch (langChoice) {
+                                case "1":
+                                    // Subscriber prefers French language
+                                    if (!category.equals("")) {
+                                        response = "CON Veuillez choisir votre experience:\n"
+                                                + "1. 0-2 ans\n"
+                                                + "2. 2-4 ans\n"
+                                                + "3. 4-7 ans\n"
+                                                + "4. >7 ans";
+                                    } else {
+                                        response = "END Categorie choisie invalide. Veuillez reessayer.";
+                                    }
+
+                                    break;
+
+                                case "2":
+                                    // Subscriber prefers English language
+                                    if (!category.equals("")) {
+                                        response = "CON Select a career level:\n"
+                                                + "1. 0-2 yrs\n"
+                                                + "2. 2-4 yrs\n"
+                                                + "3. 4-7 yrs\n"
+                                                + "4. >7 yrs";
+                                    } else {
+                                        response = "END Selected category is invalid. Please try again.";
+                                    }
+
+                                    break;
+
+                                default:
+                                    // French is the default language
+                                    if (!category.equals("")) {
+                                        response = "CON Veuillez choisir votre experience:\n"
+                                                + "1. 0-2 ans\n"
+                                                + "2. 2-4 ans\n"
+                                                + "3. 4-7 ans\n"
+                                                + "4. >7 ans";
+                                    } else {
+                                        response = "END Categorie choisie invalide. Veuillez reessayer.";
+                                    }
+
+                                    break;
                             }
-                            
-                            break;
-                            
-                        default:
-                            // French is the default language
+
+                            // Update the subscriber's category if necessary
                             if (!category.equals("")) {
-                                response = "CON Veuillez choisir votre niveau:\n"
-                                        + "1 Stage\n"
-                                        + "2 Entree\n"
-                                        + "3 Associe\n"
-                                        + "4 Haute Direction\n"
-                                        + "5 Expert";
-                            } else {
-                                response = "END Categorie choisie invalide. Veuillez reessayer.";
-                            }
-                            
-                            break;
-                    }
-                    
-                    // Update the subscriber's category if necessary
-                    if (!category.equals("")) {
-                        dbHandler.updateSubscriberCategory(phone, category);
-                    }                    
-                } else {
-                    // If they're not accessing the platform for the first time
-                    /* Code to get the user's preferred language */
-                    String lang = "FR";
-                    String serviceChoice = level[0];
-                    String catChoice = level[1];
-                    String lastChoice = level[2];
-                    
-                    switch (lang) {
-                        case "FR":
-                            if (serviceChoice.equals("77")) {
-                                switch (catChoice) {
-                                    case "1":
-                                        String prefLang;
-                                        
-                                        switch (lastChoice) {
+                                dbHandler.updateSubscriberCategory(number, category);
+                            }                    
+                        } else {
+                            // If they're not accessing the platform for the first time
+                            String lang = dbHandler.getPreferredLang(number);
+                            String serviceChoice = level[0];
+                            String catChoice = level[1];
+                            String lastChoice = level[2];
+
+                            switch (lang) {
+                                case "FR":
+                                    if (serviceChoice.equals("77")) {
+                                        switch (catChoice) {
                                             case "1":
-                                                prefLang = "FR";
-                                                
-                                                response = "END Votre langue preferee a ete mise a jour.\n"
-                                                        + "Merci pour votre fidelite.";
-                                                
+                                                String prefLang;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        prefLang = "FR";
+
+                                                        response = "END Votre langue preferee a ete mise a jour.\n"
+                                                                + "Merci pour votre fidelite.";
+
+                                                        break;
+
+                                                    case "2":
+                                                        prefLang = "EN";
+
+                                                        response = "END Your preferred language has been updated.\n"
+                                                                + "Thank you for your loyalty.";
+
+                                                        break;
+
+                                                    default:
+                                                        prefLang = "";
+
+                                                        response = "END Choix invalide. Veuillez reessayer.";
+
+                                                        break;
+                                                }
+
+                                                // Update subscriber's preferred language
+                                                dbHandler.updateSubscriberLanguage(number, prefLang);
+
                                                 break;
-                                                
+
                                             case "2":
-                                                prefLang = "EN";
-                                                
-                                                response = "END Your preferred language has been updated.\n"
-                                                        + "Thank you for your loyalty.";
-                                                
+                                                String cat;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        cat = "Informatique";
+                                                        break;
+
+                                                    case "2":
+                                                        cat = "Engineering";
+                                                        break;
+
+                                                    case "3":
+                                                        cat = "Marketing";
+                                                        break;
+
+                                                    case "4":
+                                                        cat = "Accounting";
+                                                        break;
+
+                                                    case "5":
+                                                        cat = "Finance";
+                                                        break;
+
+                                                    case "6":
+                                                        cat = "Human Resources";
+                                                        break;
+
+                                                    case "7":
+                                                        cat = "Management";
+                                                        break;
+
+                                                    default:
+                                                        cat = "";
+                                                        break;
+                                                }
+
+                                                if (!cat.equals("")) {
+                                                    // Update subscriber's category
+                                                    dbHandler.updateSubscriberCategory(number, cat);
+
+                                                    response = "END Votre categorie a ete mise a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
                                                 break;
-                                                
-                                            default:
-                                                prefLang = "";
-                                                
-                                                response = "END Choix invalide. Veuillez reessayer.";
-                                                
-                                                break;
-                                        }
-                                        
-                                        // Update subscriber's preferred language
-                                        dbHandler.updateSubscriberLanguage(phone, prefLang);
-                                        
-                                        break;
-                                        
-                                    case "2":
-                                        String cat;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                cat = "Informatique";
-                                                break;
-                                                
-                                            case "2":
-                                                cat = "Engineering";
-                                                break;
-                                                
+
                                             case "3":
-                                                cat = "Marketing";
+                                                String l;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        l = "0-2";
+                                                        break;
+
+                                                    case "2":
+                                                        l = "2-4";
+                                                        break;
+
+                                                    case "3":
+                                                        l = "4-7";
+                                                        break;
+
+                                                    case "4":
+                                                        l = ">7";
+                                                        break;
+
+                                                    default:
+                                                        l = "";
+                                                        break;
+                                                }
+
+                                                if (!l.equals("")) {
+                                                    // Update subscriber's experience
+                                                    dbHandler.updateSubscriberExperience(number, l);
+
+                                                    response = "END Votre experience a ete mise a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
                                                 break;
-                                                
+
                                             case "4":
-                                                cat = "Accounting";
-                                                break;
+                                                String age;
                                                 
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        age = "15-20";
+                                                        break;
+                                                        
+                                                    case "2":
+                                                        age = "20-30";
+                                                        break;
+                                                        
+                                                    case "3":
+                                                        age = "30-40";
+                                                        break;
+                                                        
+                                                    case "4":
+                                                        age = ">40";
+                                                        break;
+                                                        
+                                                    default:
+                                                        age = "";
+                                                        break;
+                                                }
+
+                                                if (!age.equals("")) {
+                                                    // Update the subscriber's age
+                                                    dbHandler.updateSubscriberAgeGroup(number, age);
+
+                                                    response = "END Votre groupe d\'age a ete mis a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
+                                                break;
+
                                             case "5":
-                                                cat = "Finance";
+                                                String gender;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        gender = "Male";
+                                                        break;
+
+                                                    case "2":
+                                                        gender = "Female";
+                                                        break;
+
+                                                    default:
+                                                        gender = "";
+                                                        break;
+                                                }
+
+                                                if (!gender.equals("")) {
+                                                    // Update subscriber's gender
+                                                    dbHandler.updateSubscriberGender(number, gender);
+
+                                                    response = "END Votre sexe a ete mis a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
                                                 break;
-                                                
+
                                             case "6":
-                                                cat = "Human Resources";
-                                                break;
+                                                String region;
                                                 
-                                            case "7":
-                                                cat = "Management";
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        region = "AD";
+                                                        break;
+                                                        
+                                                    case "2":
+                                                        region = "CE";
+                                                        break;
+                                                        
+                                                    case "3":
+                                                        region = "E";
+                                                        break;
+                                                        
+                                                    case "4":
+                                                        region = "FN";
+                                                        break;
+                                                        
+                                                    case "5":
+                                                        region = "LT";
+                                                        break;
+                                                        
+                                                    case "6":
+                                                        region = "N";
+                                                        break;
+                                                        
+                                                    case "7":
+                                                        region = "NW";
+                                                        break;
+                                                        
+                                                    case "8":
+                                                        region = "W";
+                                                        break;
+                                                        
+                                                    case "9":
+                                                        region  = "S";
+                                                        break;
+                                                        
+                                                    case "10":
+                                                        region = "SW";
+                                                        break;
+                                                        
+                                                    default:
+                                                        region = "";
+                                                        break;
+                                                }
+
+                                                if (!region.equals("")) {
+                                                    // Update subscriber's region of residence
+                                                    dbHandler.updateSubscriberLocation(number, region);
+
+                                                    response = "END Votre region de residence a ete mise a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
                                                 break;
-                                                
+
                                             default:
-                                                cat = "";
+                                                response = "END Choix invalide. Veuillez reessayer.";
+
                                                 break;
                                         }
-                                        
-                                        if (!cat.equals("")) {
-                                            // Update subscriber's category
-                                            dbHandler.updateSubscriberCategory(phone, cat);
-                                            
-                                            response = "END Votre categorie a ete mise a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Choix invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "3":
-                                        String l;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                l = "Internship";
-                                                break;
-                                                
-                                            case "2":
-                                                l = "Entry Level";
-                                                break;
-                                                
-                                            case "3":
-                                                l = "Associate";
-                                                break;
-                                                
-                                            case "4":
-                                                l = "Senior Management";
-                                                break;
-                                                
-                                            case "5":
-                                                l = "Expert";
-                                                break;
-                                                
-                                            default:
-                                                l = "";
-                                                break;
-                                        }
-                                        
-                                        if (!l.equals("")) {
-                                            // Update subscriber's level
-                                            dbHandler.updateSubscriberLevel(phone, l);
-                                            
-                                            response = "END Votre niveau a ete mis a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Choix invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "4":
-                                        String age = lastChoice;
-                                        
-                                        if (!age.isEmpty()) {
-                                            // Update the subscriber's age
-                                            dbHandler.updateSubscriberAge(phone, age);
-                                            
-                                            response = "END Votre age a ete mis a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Age invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "5":
-                                        String gender;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                gender = "Male";
-                                                break;
-                                                
-                                            case "2":
-                                                gender = "Female";
-                                                break;
-                                                
-                                            default:
-                                                gender = "";
-                                                break;
-                                        }
-                                        
-                                        if (!gender.equals("")) {
-                                            // Update subscriber's gender
-                                            dbHandler.updateSubscriberGender(phone, gender);
-                                            
-                                            response = "END Votre sexe a ete mis a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Choix invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "6":
-                                        String town = lastChoice;
-                                        
-                                        if (!town.isEmpty()) {
-                                            // Update subscriber's town of residence
-                                            dbHandler.updateSubscriberTown(phone, town);
-                                            
-                                            response = "END Votre ville de residence a ete mise a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Ville entree invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    default:
+                                    } else {
                                         response = "END Choix invalide. Veuillez reessayer.";
-                                        
-                                        break;
-                                }
-                            } else {
-                                response = "END Choix invalide. Veuillez reessayer.";
-                            }
-                            
-                            break;
-                            
-                        case "EN":
-                            if (serviceChoice.equals("77")) {
-                                switch (catChoice) {
-                                    case "1":
-                                        String prefLang;
-                                        
-                                        switch (lastChoice) {
+                                    }
+
+                                    break;
+
+                                case "EN":
+                                    if (serviceChoice.equals("77")) {
+                                        switch (catChoice) {
                                             case "1":
-                                                prefLang = "FR";
-                                                
-                                                response = "END Votre langue preferee a ete mise a jour.\n"
-                                                        + "Merci pour votre fidelite.";
-                                                
+                                                String prefLang;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        prefLang = "FR";
+
+                                                        response = "END Votre langue preferee a ete mise a jour.\n"
+                                                                + "Merci pour votre fidelite.";
+
+                                                        break;
+
+                                                    case "2":
+                                                        prefLang = "EN";
+
+                                                        response = "END Your preferred language has been updated.\n"
+                                                                + "Thank you for your loyalty.";
+
+                                                        break;
+
+                                                    default:
+                                                        prefLang = "";
+
+                                                        response = "END Invalid choice. Please try again.";
+
+                                                        break;
+                                                }
+
+                                                // Update subscriber's preferred language
+                                                dbHandler.updateSubscriberLanguage(number, prefLang);
+
                                                 break;
-                                                
+
                                             case "2":
-                                                prefLang = "EN";
-                                                
-                                                response = "END Your preferred language has been updated.\n"
-                                                        + "Thank you for your loyalty.";
-                                                
+                                                String cat;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        cat = "Informatique";
+                                                        break;
+
+                                                    case "2":
+                                                        cat = "Engineering";
+                                                        break;
+
+                                                    case "3":
+                                                        cat = "Marketing";
+                                                        break;
+
+                                                    case "4":
+                                                        cat = "Accounting";
+                                                        break;
+
+                                                    case "5":
+                                                        cat = "Finance";
+                                                        break;
+
+                                                    case "6":
+                                                        cat = "Human Resources";
+                                                        break;
+
+                                                    case "7":
+                                                        cat = "Management";
+                                                        break;
+
+                                                    default:
+                                                        cat = "";
+                                                        break;
+                                                }
+
+                                                if (!cat.equals("")) {
+                                                    // Update subscriber's category
+                                                    dbHandler.updateSubscriberCategory(number, cat);
+
+                                                    response = "END Your category has been updated.\n"
+                                                            + "Thank you for your loyalty.";
+                                                } else {
+                                                    response = "END Invalid choice. Please try again.";
+                                                }
+
                                                 break;
+
+                                            case "3":
+                                                String l;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        l = "0-2";
+                                                        break;
+
+                                                    case "2":
+                                                        l = "2-4";
+                                                        break;
+
+                                                    case "3":
+                                                        l = "4-7";
+                                                        break;
+
+                                                    case "4":
+                                                        l = ">7";
+                                                        break;
+
+                                                    default:
+                                                        l = "";
+                                                        break;
+                                                }
+
+                                                if (!l.equals("")) {
+                                                    // Update subscriber's experience
+                                                    dbHandler.updateSubscriberExperience(number, l);
+
+                                                    response = "END Your experience has been updated.\n"
+                                                            + "Thank you for your loyalty.";
+                                                } else {
+                                                    response = "END Invalid choice. Please try again.";
+                                                }
+
+                                                break;
+
+                                            case "4":
+                                                String age;
                                                 
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        age = "15-20";
+                                                        break;
+                                                        
+                                                    case "2":
+                                                        age = "20-30";
+                                                        break;
+                                                        
+                                                    case "3":
+                                                        age = "30-40";
+                                                        break;
+                                                        
+                                                    case "4":
+                                                        age = ">40";
+                                                        break;
+                                                        
+                                                    default:
+                                                        age = "";
+                                                        break;
+                                                }
+
+                                                if (!age.equals("")) {
+                                                    // Update the subscriber's age group
+                                                    dbHandler.updateSubscriberAgeGroup(number, age);
+
+                                                    response = "END Your age group has been updated.\n"
+                                                            + "Thank you for your loyalty.";
+                                                } else {
+                                                    response = "END Invalid choice. Please try again.";
+                                                }
+
+                                                break;
+
+                                            case "5":
+                                                String gender;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        gender = "Male";
+                                                        break;
+
+                                                    case "2":
+                                                        gender = "Female";
+                                                        break;
+
+                                                    default:
+                                                        gender = "";
+                                                        break;
+                                                }
+
+                                                if (!gender.equals("")) {
+                                                    // Update subscriber's gender
+                                                    dbHandler.updateSubscriberGender(number, gender);
+
+                                                    response = "END Your gender has been updated.\n"
+                                                            + "Thank you for your loyalty.";
+                                                } else {
+                                                    response = "END Invalid choice. Please try again.";
+                                                }
+
+                                                break;
+
+                                            case "6":
+                                                String region;
+                                                
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        region = "AD";
+                                                        break;
+                                                        
+                                                    case "2":
+                                                        region = "CE";
+                                                        break;
+                                                        
+                                                    case "3":
+                                                        region = "E";
+                                                        break;
+                                                        
+                                                    case "4":
+                                                        region = "FN";
+                                                        break;
+                                                        
+                                                    case "5":
+                                                        region = "LT";
+                                                        break;
+                                                        
+                                                    case "6":
+                                                        region = "N";
+                                                        break;
+                                                        
+                                                    case "7":
+                                                        region = "NW";
+                                                        break;
+                                                        
+                                                    case "8":
+                                                        region = "W";
+                                                        break;
+                                                        
+                                                    case "9":
+                                                        region  = "S";
+                                                        break;
+                                                        
+                                                    case "10":
+                                                        region = "SW";
+                                                        break;
+                                                        
+                                                    default:
+                                                        region = "";
+                                                        break;
+                                                }
+
+                                                if (!region.equals("")) {
+                                                    // Update subscriber's region of residence
+                                                    dbHandler.updateSubscriberLocation(number, region);
+
+                                                    response = "END Your region of residence has been updated.\n"
+                                                            + "Thank you for your loyalty.";
+                                                } else {
+                                                    response = "END Invalid choice. Please try again.";
+                                                }
+
+                                                break;
+
                                             default:
-                                                prefLang = "";
-                                                
                                                 response = "END Invalid choice. Please try again.";
-                                                
+
                                                 break;
                                         }
-                                        
-                                        // Update subscriber's preferred language
-                                        dbHandler.updateSubscriberLanguage(phone, prefLang);
-                                        
-                                        break;
-                                        
-                                    case "2":
-                                        String cat;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                cat = "Informatique";
-                                                break;
-                                                
-                                            case "2":
-                                                cat = "Engineering";
-                                                break;
-                                                
-                                            case "3":
-                                                cat = "Marketing";
-                                                break;
-                                                
-                                            case "4":
-                                                cat = "Accounting";
-                                                break;
-                                                
-                                            case "5":
-                                                cat = "Finance";
-                                                break;
-                                                
-                                            case "6":
-                                                cat = "Human Resources";
-                                                break;
-                                                
-                                            case "7":
-                                                cat = "Management";
-                                                break;
-                                                
-                                            default:
-                                                cat = "";
-                                                break;
-                                        }
-                                        
-                                        if (!cat.equals("")) {
-                                            // Update subscriber's category
-                                            dbHandler.updateSubscriberCategory(phone, cat);
-                                            
-                                            response = "END Your category has been updated.\n"
-                                                    + "Thank you for your loyalty.";
-                                        } else {
-                                            response = "END Invalid choice. Please try again.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "3":
-                                        String l;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                l = "Internship";
-                                                break;
-                                                
-                                            case "2":
-                                                l = "Entry Level";
-                                                break;
-                                                
-                                            case "3":
-                                                l = "Associate";
-                                                break;
-                                                
-                                            case "4":
-                                                l = "Senior Management";
-                                                break;
-                                                
-                                            case "5":
-                                                l = "Expert";
-                                                break;
-                                                
-                                            default:
-                                                l = "";
-                                                break;
-                                        }
-                                        
-                                        if (!l.equals("")) {
-                                            // Update subscriber's level
-                                            dbHandler.updateSubscriberLevel(phone, l);
-                                            
-                                            response = "END Your level has been updated.\n"
-                                                    + "Thank you for your loyalty.";
-                                        } else {
-                                            response = "END Invalid choice. Please try again.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "4":
-                                        String age = lastChoice;
-                                        
-                                        if (!age.isEmpty()) {
-                                            // Update the subscriber's age
-                                            dbHandler.updateSubscriberAge(phone, age);
-                                            
-                                            response = "END Your age has been updated.\n"
-                                                    + "Thank you for your loyalty.";
-                                        } else {
-                                            response = "END Invalid age. Please try again.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "5":
-                                        String gender;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                gender = "Male";
-                                                break;
-                                                
-                                            case "2":
-                                                gender = "Female";
-                                                break;
-                                                
-                                            default:
-                                                gender = "";
-                                                break;
-                                        }
-                                        
-                                        if (!gender.equals("")) {
-                                            // Update subscriber's gender
-                                            dbHandler.updateSubscriberGender(phone, gender);
-                                            
-                                            response = "END Your gender has been updated.\n"
-                                                    + "Thank you for your loyalty.";
-                                        } else {
-                                            response = "END Invalid choice. Please try again.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "6":
-                                        String town = lastChoice;
-                                        
-                                        if (!town.isEmpty()) {
-                                            // Update subscriber's town of residence
-                                            dbHandler.updateSubscriberTown(phone, town);
-                                            
-                                            response = "END Your town of residence has been updated.\n"
-                                                    + "Thank you for your loyalty.";
-                                        } else {
-                                            response = "END The town you entered is not valid. "
-                                                    + "Please try again.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    default:
+                                    } else {
                                         response = "END Invalid choice. Please try again.";
-                                        
-                                        break;
-                                }
-                            } else {
-                                response = "END Invalid choice. Please try again.";
-                            }
-                            
-                            break;
-                            
-                        default:
-                            if (serviceChoice.equals("77")) {
-                                switch (catChoice) {
-                                    case "1":
-                                        String prefLang;
-                                        
-                                        switch (lastChoice) {
+                                    }
+
+                                    break;
+
+                                default:
+                                    if (serviceChoice.equals("77")) {
+                                        switch (catChoice) {
                                             case "1":
-                                                prefLang = "FR";
-                                                
-                                                response = "END Votre langue preferee a ete mise a jour.\n"
-                                                        + "Merci pour votre fidelite.";
-                                                
+                                                String prefLang;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        prefLang = "FR";
+
+                                                        response = "END Votre langue preferee a ete mise a jour.\n"
+                                                                + "Merci pour votre fidelite.";
+
+                                                        break;
+
+                                                    case "2":
+                                                        prefLang = "EN";
+
+                                                        response = "END Your preferred language has been updated.\n"
+                                                                + "Thank you for your loyalty.";
+
+                                                        break;
+
+                                                    default:
+                                                        prefLang = "";
+
+                                                        response = "END Choix invalide. Veuillez reessayer.";
+
+                                                        break;
+                                                }
+
+                                                // Update subscriber's preferred language
+                                                dbHandler.updateSubscriberLanguage(number, prefLang);
+
                                                 break;
-                                                
+
                                             case "2":
-                                                prefLang = "EN";
-                                                
-                                                response = "END Your preferred language has been updated.\n"
-                                                        + "Thank you for your loyalty.";
-                                                
+                                                String cat;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        cat = "Informatique";
+                                                        break;
+
+                                                    case "2":
+                                                        cat = "Engineering";
+                                                        break;
+
+                                                    case "3":
+                                                        cat = "Marketing";
+                                                        break;
+
+                                                    case "4":
+                                                        cat = "Accounting";
+                                                        break;
+
+                                                    case "5":
+                                                        cat = "Finance";
+                                                        break;
+
+                                                    case "6":
+                                                        cat = "Human Resources";
+                                                        break;
+
+                                                    case "7":
+                                                        cat = "Management";
+                                                        break;
+
+                                                    default:
+                                                        cat = "";
+                                                        break;
+                                                }
+
+                                                if (!cat.equals("")) {
+                                                    // Update subscriber's category
+                                                    dbHandler.updateSubscriberCategory(number, cat);
+
+                                                    response = "END Votre categorie a ete mise a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
                                                 break;
-                                                
-                                            default:
-                                                prefLang = "";
-                                                
-                                                response = "END Choix invalide. Veuillez reessayer.";
-                                                
-                                                break;
-                                        }
-                                        
-                                        // Update subscriber's preferred language
-                                        dbHandler.updateSubscriberLanguage(phone, prefLang);
-                                        
-                                        break;
-                                        
-                                    case "2":
-                                        String cat;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                cat = "Informatique";
-                                                break;
-                                                
-                                            case "2":
-                                                cat = "Engineering";
-                                                break;
-                                                
+
                                             case "3":
-                                                cat = "Marketing";
+                                                String l;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        l = "0-2";
+                                                        break;
+
+                                                    case "2":
+                                                        l = "2-4";
+                                                        break;
+
+                                                    case "3":
+                                                        l = "4-7";
+                                                        break;
+
+                                                    case "4":
+                                                        l = ">7";
+                                                        break;
+
+                                                    default:
+                                                        l = "";
+                                                        break;
+                                                }
+
+                                                if (!l.equals("")) {
+                                                    // Update subscriber's experience
+                                                    dbHandler.updateSubscriberExperience(number, l);
+
+                                                    response = "END Votre experience a ete mise a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
                                                 break;
-                                                
+
                                             case "4":
-                                                cat = "Accounting";
-                                                break;
+                                                String age;
                                                 
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        age = "15-20";
+                                                        break;
+                                                        
+                                                    case "2":
+                                                        age = "20-30";
+                                                        break;
+                                                        
+                                                    case "3":
+                                                        age = "30-40";
+                                                        break;
+                                                        
+                                                    case "4":
+                                                        age = ">40";
+                                                        break;
+                                                        
+                                                    default:
+                                                        age = "";
+                                                        break;
+                                                }
+
+                                                if (!age.equals("")) {
+                                                    // Update the subscriber's age
+                                                    dbHandler.updateSubscriberAgeGroup(number, age);
+
+                                                    response = "END Votre groupe d\'age a ete mis a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
+                                                break;
+
                                             case "5":
-                                                cat = "Finance";
+                                                String gender;
+
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        gender = "Male";
+                                                        break;
+
+                                                    case "2":
+                                                        gender = "Female";
+                                                        break;
+
+                                                    default:
+                                                        gender = "";
+                                                        break;
+                                                }
+
+                                                if (!gender.equals("")) {
+                                                    // Update subscriber's gender
+                                                    dbHandler.updateSubscriberGender(number, gender);
+
+                                                    response = "END Votre sexe a ete mis a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
                                                 break;
-                                                
+
                                             case "6":
-                                                cat = "Human Resources";
-                                                break;
+                                                String region;
                                                 
-                                            case "7":
-                                                cat = "Management";
+                                                switch (lastChoice) {
+                                                    case "1":
+                                                        region = "AD";
+                                                        break;
+                                                        
+                                                    case "2":
+                                                        region = "CE";
+                                                        break;
+                                                        
+                                                    case "3":
+                                                        region = "E";
+                                                        break;
+                                                        
+                                                    case "4":
+                                                        region = "FN";
+                                                        break;
+                                                        
+                                                    case "5":
+                                                        region = "LT";
+                                                        break;
+                                                        
+                                                    case "6":
+                                                        region = "N";
+                                                        break;
+                                                        
+                                                    case "7":
+                                                        region = "NW";
+                                                        break;
+                                                        
+                                                    case "8":
+                                                        region = "W";
+                                                        break;
+                                                        
+                                                    case "9":
+                                                        region  = "S";
+                                                        break;
+                                                        
+                                                    case "10":
+                                                        region = "SW";
+                                                        break;
+                                                        
+                                                    default:
+                                                        region = "";
+                                                        break;
+                                                }
+
+                                                if (!region.equals("")) {
+                                                    // Update subscriber's region of residence
+                                                    dbHandler.updateSubscriberLocation(number, region);
+
+                                                    response = "END Votre region de residence a ete mise a jour.\n"
+                                                            + "Merci pour votre fidelite.";
+                                                } else {
+                                                    response = "END Choix invalide. Veuillez reessayer.";
+                                                }
+
                                                 break;
-                                                
+
                                             default:
-                                                cat = "";
+                                                response = "END Choix invalide. Veuillez reessayer.";
+
                                                 break;
                                         }
-                                        
-                                        if (!cat.equals("")) {
-                                            // Update subscriber's category
-                                            dbHandler.updateSubscriberCategory(phone, cat);
-                                            
-                                            response = "END Votre categorie a ete mise a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Choix invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "3":
-                                        String l;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                l = "Internship";
-                                                break;
-                                                
-                                            case "2":
-                                                l = "Entry Level";
-                                                break;
-                                                
-                                            case "3":
-                                                l = "Associate";
-                                                break;
-                                                
-                                            case "4":
-                                                l = "Senior Management";
-                                                break;
-                                                
-                                            case "5":
-                                                l = "Expert";
-                                                break;
-                                                
-                                            default:
-                                                l = "";
-                                                break;
-                                        }
-                                        
-                                        if (!l.equals("")) {
-                                            // Update subscriber's level
-                                            dbHandler.updateSubscriberLevel(phone, l);
-                                            
-                                            response = "END Votre niveau a ete mis a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Choix invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "4":
-                                        String age = lastChoice;
-                                        
-                                        if (!age.isEmpty()) {
-                                            // Update the subscriber's age
-                                            dbHandler.updateSubscriberAge(phone, age);
-                                            
-                                            response = "END Votre age a ete mis a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Age invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "5":
-                                        String gender;
-                                        
-                                        switch (lastChoice) {
-                                            case "1":
-                                                gender = "Male";
-                                                break;
-                                                
-                                            case "2":
-                                                gender = "Female";
-                                                break;
-                                                
-                                            default:
-                                                gender = "";
-                                                break;
-                                        }
-                                        
-                                        if (!gender.equals("")) {
-                                            // Update subscriber's gender
-                                            dbHandler.updateSubscriberGender(phone, gender);
-                                            
-                                            response = "END Votre sexe a ete mis a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Choix invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    case "6":
-                                        String town = lastChoice;
-                                        
-                                        if (!town.isEmpty()) {
-                                            // Update subscriber's town of residence
-                                            dbHandler.updateSubscriberTown(phone, town);
-                                            
-                                            response = "END Votre ville de residence a ete mise a jour.\n"
-                                                    + "Merci pour votre fidelite.";
-                                        } else {
-                                            response = "END Ville entree invalide. Veuillez reessayer.";
-                                        }
-                                        
-                                        break;
-                                        
-                                    default:
+                                    } else {
                                         response = "END Choix invalide. Veuillez reessayer.";
-                                        
-                                        break;
-                                }
-                            } else {
-                                response = "END Choix invalide. Veuillez reessayer.";
+                                    }
                             }
+                        }
                     }
-                }
-            }
-            
-            else if (!level[3].isEmpty() && !level[3].equals("") && level[4].isEmpty()) {
-                // Determine if it is user's first time on platform
-                /* Code to get user's first time status */
-                boolean first = true; // This is just a placeholder
 
-                if (first) {
-                    String langChoice = level[0];
-                    String levelChoice = level[3];
-                    String careerLevel;
-                    
-                    switch (levelChoice) {
-                        case "1":
-                            careerLevel = "Internship";
-                            break;
-                            
-                        case "2":
-                            careerLevel = "Entry Level";
-                            break;
-                            
-                        case "3":
-                            careerLevel = "Associate";
-                            break;
-                            
-                        case "4":
-                            careerLevel = "Senior Management";
-                            break;
-                            
-                        case "5":
-                            careerLevel = "Expert";
-                            break;
-                            
-                        default:
-                            careerLevel = "";
-                            break;
-                    }
-                    
-                    switch (langChoice) {
-                        case "1":
-                            // Subscriber prefers French language
-                            if (!careerLevel.equals("")) {
-                                response = "CON Veuillez entrer votre age s\'il vous plait:";
-                            } else {
-                                response = "END Niveau choisi invalide. Veuillez reessayer.";
-                            }
-                            
-                            break;
-                            
-                        case "2":
-                            // Subscriber prefers English language
-                            if (!careerLevel.equals("")) {
-                                response = "CON Please enter your age:";
-                            } else {
-                                response = "END Selected career level is invalid. Please try again.";
-                            }
-                            
-                            break;
-                            
-                        default:
-                            // French is the default language
-                            if (!careerLevel.equals("")) {
-                                response = "CON Veuillez entrer votre age s\'il vous plait:";
-                            } else {
-                                response = "END Niveau choisi invalide. Veuillez reessayer.";
-                            }
-                            
-                            break;
-                    }
-                    
-                    // Update the subscriber's level if necessary
-                    if (!careerLevel.equals("")) {
-                        dbHandler.updateSubscriberLevel(phone, careerLevel);
-                    }
-                } else {
-                    // Not a first timer
-                }
-            }
-            
-            else if (!level[4].isEmpty() && !level[4].equals("") && level[5].isEmpty()) {
-                // Determine if it is user's first time on platform
-                /* Code to get user's first time status */
-                boolean first = true; // This is just a placeholder
+                    else if (!level[3].isEmpty() && !level[3].equals("") && level[4].isEmpty()) {
+                        // Determine if it is user's first time on platform
+                        boolean first = dbHandler.isFirstTime(number);
 
-                if (first) {
-                    String langChoice = level[0];
-                    String age = level[4];
-                    
-                    switch (langChoice) {
-                        case "1":
-                            // Subscriber prefers French language
-                            response = "CON Plus que deux etapes a franchir!\n"
-                                    + "Veuillez choisir votre sexe:\n"
-                                    + "1 Homme\n"
-                                    + "2 Femme";
-                            
-                            break;
-                            
-                        case "2":
-                            // Subscriber prefers English language
-                            response = "CON Two more steps to go!\n"
-                                    + "Please select your gender:\n"
-                                    + "1 Male\n"
-                                    + "2 Female";
-                            
-                            break;
-                            
-                        default:
-                            // French is the default language
-                            response = "CON Plus que deux etapes a franchir!\n"
-                                    + "Veuillez choisir votre sexe:\n"
-                                    + "1 Homme\n"
-                                    + "2 Femme";
-                            
-                            break;
-                    }
-                    
-                    // Update the subscriber's age 
-                    dbHandler.updateSubscriberAge(phone, age);
-                } else {
-                    // Not a first timer
-                }
-            }
-            
-            else if (!level[5].isEmpty() && !level[5].equals("") && level[6].isEmpty()) {
-                // Determine if it is user's first time on platform
-                /* Code to get user's first time status */
-                boolean first = true; // This is just a placeholder
+                        if (first) {
+                            String langChoice = level[0];
+                            String levelChoice = level[3];
+                            String experience;
 
-                if (first) {
-                    String langChoice = level[0];
-                    String genderChoice = level[5];
-                    String gender;
-                    
-                    switch (genderChoice) {
-                        case "1":
-                            gender = "Male";
-                            break;
-                            
-                        case "2":
-                            gender = "Female";
-                            break;
-                            
-                        default:
-                            gender = "";
-                            break;
+                            switch (levelChoice) {
+                                case "1":
+                                    experience = "0-2";
+                                    break;
+
+                                case "2":
+                                    experience = "2-4";
+                                    break;
+
+                                case "3":
+                                    experience = "4-7";
+                                    break;
+
+                                case "4":
+                                    experience = ">7";
+                                    break;
+
+                                default:
+                                    experience = "";
+                                    break;
+                            }
+
+                            switch (langChoice) {
+                                case "1":
+                                    // Subscriber prefers French language
+                                    if (!experience.equals("")) {
+                                        response = "CON Veuillez choisir votre groupe d\'age:\n"
+                                                + "1. 15-20\n"
+                                                + "2. 20-30\n"
+                                                + "3. 30-40\n"
+                                                + "4. >40";
+                                    } else {
+                                        response = "END Experience choisie invalide. Veuillez reessayer.";
+                                    }
+
+                                    break;
+
+                                case "2":
+                                    // Subscriber prefers English language
+                                    if (!experience.equals("")) {
+                                        response = "CON Please select your age group:\n"
+                                                + "1. 15-20\n"
+                                                + "2. 20-30\n"
+                                                + "3. 30-40\n"
+                                                + "4. >40";
+                                    } else {
+                                        response = "END Selected experience is invalid. Please try again.";
+                                    }
+
+                                    break;
+
+                                default:
+                                    // French is the default language
+                                    if (!experience.equals("")) {
+                                        response = "CON Veuillez choisir votre groupe d\'age:\n"
+                                                + "1. 15-20\n"
+                                                + "2. 20-30\n"
+                                                + "3. 30-40\n"
+                                                + "4. >40";
+                                    } else {
+                                        response = "END Experience choisie invalide. Veuillez reessayer.";
+                                    }
+
+                                    break;
+                            }
+
+                            // Update the subscriber's experience if necessary
+                            if (!experience.equals("")) {
+                                dbHandler.updateSubscriberExperience(number, experience);
+                            }
+                        } else {
+                            // Not a first timer
+                        }
                     }
-                    
-                    switch (langChoice) {
-                        case "1":
-                            // Subscriber prefers French language
+
+                    else if (!level[4].isEmpty() && !level[4].equals("") && level[5].isEmpty()) {
+                        // Determine if it is user's first time on platform
+                        boolean first = dbHandler.isFirstTime(number);
+
+                        if (first) {
+                            String langChoice = level[0];
+                            String age = level[4];
+
+                            switch (langChoice) {
+                                case "1":
+                                    // Subscriber prefers French language
+                                    response = "CON Plus que deux etapes a franchir!\n"
+                                            + "Veuillez choisir votre sexe:\n"
+                                            + "1 Homme\n"
+                                            + "2 Femme";
+
+                                    break;
+
+                                case "2":
+                                    // Subscriber prefers English language
+                                    response = "CON Two more steps to go!\n"
+                                            + "Please select your gender:\n"
+                                            + "1 Male\n"
+                                            + "2 Female";
+
+                                    break;
+
+                                default:
+                                    // French is the default language
+                                    response = "CON Plus que deux etapes a franchir!\n"
+                                            + "Veuillez choisir votre sexe:\n"
+                                            + "1 Homme\n"
+                                            + "2 Femme";
+
+                                    break;
+                            }
+
+                            // Update the subscriber's age group
+                            dbHandler.updateSubscriberAgeGroup(number, age);
+                        } else {
+                            // Not a first timer
+                        }
+                    }
+
+                    else if (!level[5].isEmpty() && !level[5].equals("") && level[6].isEmpty()) {
+                        // Determine if it is user's first time on platform
+                        boolean first = dbHandler.isFirstTime(number);
+
+                        if (first) {
+                            String langChoice = level[0];
+                            String genderChoice = level[5];
+                            String gender;
+
+                            switch (genderChoice) {
+                                case "1":
+                                    gender = "Male";
+                                    break;
+
+                                case "2":
+                                    gender = "Female";
+                                    break;
+
+                                default:
+                                    gender = "";
+                                    break;
+                            }
+
+                            switch (langChoice) {
+                                case "1":
+                                    // Subscriber prefers French language
+                                    if (!gender.equals("")) {
+                                        response = "CON Bravo! Voici la derniere etape!\n"
+                                                + "Veuillez entrer votre region de residence:\n"
+                                                + "1 AD\n"
+                                                + "2 CE\n"
+                                                + "3 E\n"
+                                                + "4 EN\n"
+                                                + "5 LT\n"
+                                                + "6 N\n"
+                                                + "7 NO\n"
+                                                + "8 OU\n"
+                                                + "9 S\n"
+                                                + "10 SO";
+                                    } else {
+                                        response = "END Sexe choisi invalide. Veuillez reessayer.";
+                                    }
+
+                                    break;
+
+                                case "2":
+                                    // Subscriber prefers English language
+                                    if (!gender.equals("")) {
+                                        response = "CON Congratulations! This is the last step!\n"
+                                                + "Please select your region of residence:\n"
+                                                + "1 AD\n"
+                                                + "2 CE\n"
+                                                + "3 E\n"
+                                                + "4 FN\n"
+                                                + "5 LT\n"
+                                                + "6 N\n"
+                                                + "7 NW\n"
+                                                + "8 W\n"
+                                                + "9 S\n"
+                                                + "10 SW";
+                                    } else {
+                                        response = "END Selected gender is invalid. Please try again.";
+                                    }
+
+                                    break;
+
+                                default:
+                                    // French is the default language
+                                    if (!gender.equals("")) {
+                                        response = "CON Bravo! Voici la derniere etape!\n"
+                                                + "Veuillez choisir votre region de residence:\n"
+                                                + "1 AD\n"
+                                                + "2 CE\n"
+                                                + "3 E\n"
+                                                + "4 EN\n"
+                                                + "5 LT\n"
+                                                + "6 N\n"
+                                                + "7 NO\n"
+                                                + "8 OU\n"
+                                                + "9 S\n"
+                                                + "10 SO";
+                                    } else {
+                                        response = "END Sexe choisi invalide. Veuillez reessayer.";
+                                    }
+
+                                    break;
+                            }
+
+                            // Update the subscriber's gender if necessary
                             if (!gender.equals("")) {
-                                response = "CON Bravo! Voici la derniere etape!\n"
-                                        + "Veuillez entrer votre ville de residence:\n"
-                                        + "(ex. Bamenda, Douala, Buea, etc)";
-                            } else {
-                                response = "END Sexe choisi invalide. Veuillez reessayer.";
+                                dbHandler.updateSubscriberGender(number, gender);
                             }
-                            
-                            break;
-                            
-                        case "2":
-                            // Subscriber prefers English language
-                            if (!gender.equals("")) {
-                                response = "CON Congratulations! This is the last step!\n"
-                                        + "Please enter your town of residence:\n"
-                                        + "(e.g. Bamenda, Douala, Buea, etc)";
-                            } else {
-                                response = "END Selected gender is invalid. Please try again.";
-                            }
-                            
-                            break;
-                            
-                        default:
-                            // French is the default language
-                            if (!gender.equals("")) {
-                                response = "CON Bravo! Voici la derniere etape!\n"
-                                        + "Veuillez entrer votre ville de residence:\n"
-                                        + "(ex. Bamenda, Douala, Buea, etc)";
-                            } else {
-                                response = "END Sexe choisi invalide. Veuillez reessayer.";
-                            }
-                            
-                            break;
+                        } else {
+                            // Not a first timer
+                        }
                     }
-                    
-                    // Update the subscriber's gender if necessary
-                    if (!gender.equals("")) {
-                        dbHandler.updateSubscriberGender(phone, gender);
-                    }
-                } else {
-                    // Not a first timer
-                }
-            }
-            
-            else if (!level[6].isEmpty() && !level[6].equals("") && level[7].isEmpty()) {
-                // Determine if it is user's first time on platform
-                /* Code to get user's first time status */
-                boolean first = true; // This is just a placeholder
 
-                if (first) {
-                    String langChoice = level[0];
-                    String town = level[6];
-                    
-                    switch (langChoice) {
-                        case "1":
-                            // Subscriber prefers French language
-                            response = "END Felicitations! Nous pourrons desormais vous "
-                                    + "fournir des informations plus precises.\n"
-                                    + "Merci pour votre fidelite!";
-                            
-                            break;
-                            
-                        case "2":
-                            // Subscriber prefers English language
-                            response = "END Congratulations! We can now provide you with "
-                                    + "more accurate information.\n"
-                                    + "Thank you for your loyalty!";
-                            
-                            break;
-                            
-                        default:
-                            // Default language is French
-                            response = "END Felicitations! Nous pourrons desormais vous "
-                                    + "fournir des informations plus precises.\n"
-                                    + "Merci pour votre fidelite!";
-                            
-                            break;
+                    else if (!level[6].isEmpty() && !level[6].equals("") && level[7].isEmpty()) {
+                        // Determine if it is user's first time on platform
+                        boolean first = dbHandler.isFirstTime(number);
+
+                        if (first) {
+                            String langChoice = level[0];
+                            String lastChoice = level[6];
+                            String region;
+                                                
+                            switch (lastChoice) {
+                                case "1":
+                                    region = "AD";
+                                    break;
+
+                                case "2":
+                                    region = "CE";
+                                    break;
+
+                                case "3":
+                                    region = "E";
+                                    break;
+
+                                case "4":
+                                    region = "FN";
+                                    break;
+
+                                case "5":
+                                    region = "LT";
+                                    break;
+
+                                case "6":
+                                    region = "N";
+                                    break;
+
+                                case "7":
+                                    region = "NW";
+                                    break;
+
+                                case "8":
+                                    region = "W";
+                                    break;
+
+                                case "9":
+                                    region  = "S";
+                                    break;
+
+                                case "10":
+                                    region = "SW";
+                                    break;
+
+                                default:
+                                    region = "";
+                                    break;
+                            }
+
+                            switch (langChoice) {
+                                case "1":
+                                    // Subscriber prefers French language
+                                    if (!region.equals("")) {
+                                        response = "END Felicitations! Nous pourrons desormais vous "
+                                                + "fournir des informations plus precises.\n"
+                                                + "Merci pour votre fidelite!";
+                                    } else {
+                                        response = "END Region choisie invalide. Veuillez reessayer.";
+                                    }
+
+                                    break;
+
+                                case "2":
+                                    // Subscriber prefers English language
+                                    if (!region.equals("")) {
+                                        response = "END Congratulations! We can now provide you with "
+                                                + "more accurate information.\n"
+                                                + "Thank you for your loyalty!";
+                                    } else {
+                                        response = "END Selected region invalid. Please try again.";
+                                    }
+
+                                    break;
+
+                                default:
+                                    // Default language is French
+                                    if (!region.equals("")) {
+                                        response = "END Felicitations! Nous pourrons desormais vous "
+                                                + "fournir des informations plus precises.\n"
+                                                + "Merci pour votre fidelite!";
+                                    } else {
+                                        response = "END Region choisie invalide. Veuillez reessayer.";
+                                    }
+
+                                    break;
+                            }
+
+                            // Update the subscriber's region of residence if necessary
+                            dbHandler.updateSubscriberLocation(number, region);
+                        } else {
+                            // Not a first timer
+                        }
                     }
                     
-                    // Update the subscriber's town of residence
-                    dbHandler.updateSubscriberTown(phone, town);
-                } else {
-                    // Not a first timer
-                }
+                    break;
             }
         } catch (NullPointerException e) {
             e.printStackTrace();
