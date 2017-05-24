@@ -5,6 +5,7 @@
  */
 package com.pixel.database;
 
+import com.pixel.model.Job;
 import com.pixel.model.Subscription;
 import com.pixel.model.User;
 import java.sql.Connection;
@@ -47,13 +48,18 @@ public class MyDBHandler {
     public static final String SUBS_COLUMN_DATE = "SUBSCRIBEDATE";
     
     public static final String TABLE_JOBS = "JOBS";
-    public static final String JOBS_COLUMN_ID = "ID";
-    public static final String JOBS_COLUMN_TITLE = "TITLE";
-    public static final String JOBS_COLUMN_URL = "URL";
-    public static final String JOBS_COLUMN_CATEGORY = "CATEGORY";
-    public static final String JOBS_COLUMN_LOCATION = "LOCATION";
-    public static final String JOBS_COLUMN_DESC = "DESCRIPTION";
-    public static final String JOBS_COLUMN_DATE = "DATEPOSTED";
+    public static final String JOB_COLUMN_ID = "ID";
+    public static final String JOB_COLUMN_TITLE = "TITLE";
+    public static final String JOB_COLUMN_URL = "URL";
+    public static final String JOB_COLUMN_CATEGORY = "CATEGORY";
+    public static final String JOB_COLUMN_LOCATION = "LOCATION";
+    public static final String JOB_COLUMN_DESC = "DESCRIPTION";
+    public static final String JOB_COLUMN_DATE = "DATEPOSTED";
+    
+    public static final String TABLE_USSDJOBS = "USSDJOBS";
+    public static final String UJOB_COLUMN_ID = "ID";
+    public static final String UJOB_COLUMN_CONTENT = "CONTENT";
+    public static final String UJOB_COLUMN_CATEGORY = "CATEGORY";
     
     // JDBC driver name and database URL
     static final String JDBC_DRIVER = "org.apache.derby.jdbc.ClientDriver";  
@@ -217,7 +223,7 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_SUBSCRIPTIONS + " SET " +
                     SUBS_COLUMN_SERVICE + "=\'" + service + "\' " +
-                    "WHERE " + SUBS_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + SUBS_COLUMN_NUMBER + "=\'" + number + "\n";
             db.executeUpdate(query);
             
             s.setService(service);
@@ -264,7 +270,7 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_SUBSCRIPTIONS + " SET " +
                     SUBS_COLUMN_SUBSCRIBED + "=\'" + status + "\' " +
-                    "WHERE " + SUBS_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + SUBS_COLUMN_NUMBER + "=\'" + number + "\'";
             db.executeUpdate(query);
             
             s.setNumber(number);
@@ -360,7 +366,7 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_USERS + " SET " +
                     USER_COLUMN_LANGUAGE + "=\'" + lang + "\' " +
-                    "WHERE " + USER_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + USER_COLUMN_NUMBER + "=\'" + number + "\'";
             db.executeUpdate(query);
             
             user.setNumber(number);
@@ -461,7 +467,7 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_SUBSCRIPTIONS + " SET " +
                     SUBS_COLUMN_FIRST + "=\'" + status + "\' " +
-                    "WHERE " + SUBS_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + SUBS_COLUMN_NUMBER + "=\'" + number + "\'";
             db.executeUpdate(query);
             
             s.setNumber(number);
@@ -508,7 +514,7 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_USERS + " SET " +
                     USER_COLUMN_CATEGORY + "=\'" + category + "\' " +
-                    "WHERE " + USER_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + USER_COLUMN_NUMBER + "=\'" + number + "\'";
             db.executeUpdate(query);
             
             user.setNumber(number);
@@ -555,7 +561,7 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_USERS + " SET " +
                     USER_COLUMN_EXPERIENCE + "=\'" + exp + "\' " +
-                    "WHERE " + USER_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + USER_COLUMN_NUMBER + "=\'" + number + "\'";
             db.executeUpdate(query);
             
             user.setNumber(number);
@@ -602,7 +608,7 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_USERS + " SET " +
                     USER_COLUMN_AGEGROUP + "=\'" + ageGroup + "\' " +
-                    "WHERE " + USER_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + USER_COLUMN_NUMBER + "=\'" + number + "\'";
             db.executeUpdate(query);
             
             user.setNumber(number);
@@ -649,7 +655,7 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_USERS + " SET " +
                     USER_COLUMN_GENDER + "=\'" + gender + "\' " +
-                    "WHERE " + USER_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + USER_COLUMN_NUMBER + "=\'" + number + "\'";
             db.executeUpdate(query);
             
             user.setNumber(number);
@@ -679,7 +685,7 @@ public class MyDBHandler {
         return user;
     }
     
-    // Method to update a subscriber's town of residence
+    // Method to update a subscriber's region of residence
     public User updateSubscriberLocation(String number, String location) {
         User user = new User();
         
@@ -696,13 +702,13 @@ public class MyDBHandler {
             
             String query = "UPDATE " + TABLE_USERS + " SET " +
                     USER_COLUMN_LOCATION + "=\'" + location + "\' " +
-                    "WHERE " + USER_COLUMN_NUMBER + "=" + number;
+                    "WHERE " + USER_COLUMN_NUMBER + "=\'" + number + "\'";
             db.executeUpdate(query);
             
             user.setNumber(number);
             user.setLocation(location);
             
-            System.out.println("Town of residence updated");
+            System.out.println("Region of residence updated");
         } catch (SQLException se) {
             se.printStackTrace();
         } catch (Exception e) {
@@ -726,10 +732,102 @@ public class MyDBHandler {
         return user;
     }
     
-    // Method to add a job
-    public String addJob(String job) {
-        /* Code to add a job to database */
-        return job;
+    // Method to add a list of jobs
+    public List<Job> addJobs(List<Job> jobList) {
+        Connection conn = null;
+        Statement db = null;
+        
+        try {
+            // Register JDBC driver
+            Class.forName(JDBC_DRIVER);
+            
+            // Open a connection
+            conn = DriverManager.getConnection(DB_URL, USER, PASS);
+            
+            db = conn.createStatement();
+            
+            for (Job job : jobList) {
+                String category = job.getCategory();
+                if (category.equals("") || category.isEmpty()) {
+                    category = "null";
+                }
+                
+                String query = "INSERT INTO " + TABLE_JOBS + "(" + JOB_COLUMN_TITLE + ", "
+                        + JOB_COLUMN_URL + ", " + JOB_COLUMN_CATEGORY + ", " + JOB_COLUMN_LOCATION + ", "
+                        + JOB_COLUMN_DESC + ", " + JOB_COLUMN_DATE + ") VALUES(\'"
+                        + job.getTitle() + "\', \'" + job.getUrl() + "\', \'" + category + "\', \'"
+                        + job.getLocation() + "\', \'" + job.getDescription() + "\', \'"
+                        + job.getDatePosted() + "\')";
+                System.out.println("Job ID: " + job.getId());
+                db.executeUpdate(query);
+            }
+        } catch (SQLException se) {
+            se.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // finally block used to close resources
+            try {
+                if (db != null)
+                    db.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+            try {
+               if (conn != null)
+                  conn.close();
+            } catch (SQLException se) {
+               se.printStackTrace();
+            }
+        }
+        
+        return jobList;
+    }
+    
+    // Method to udpate a USSDJOB
+    public boolean updateUssdJob(String content, String category) {
+        boolean ok = true;
+        
+        Connection conn = null;
+        Statement db = null;
+        
+        try {
+            // Register JDBC driver
+            Class.forName(JDBC_DRIVER);
+            
+            // Open a connection
+            conn = DriverManager.getConnection(DB_URL, USER, PASS);
+            
+            db = conn.createStatement();
+            
+            String query = "UPDATE " + TABLE_USSDJOBS + " SET " +
+                    UJOB_COLUMN_CONTENT + "=\'" + content + "\' " +
+                    "WHERE " + UJOB_COLUMN_CATEGORY + "=\'" + category + "\'";
+            System.out.println("USSD Job updated for category \'" + category + "\'");
+            db.executeUpdate(query);
+        } catch (SQLException se) {
+            se.printStackTrace();
+            ok = false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            ok = false;
+        } finally {
+            // finally block used to close resources
+            try {
+                if (db != null)
+                    db.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+            try {
+               if (conn != null)
+                  conn.close();
+            } catch (SQLException se) {
+               se.printStackTrace();
+            }
+        }
+        
+        return ok;
     }
     
     // Method to add a scholarship
