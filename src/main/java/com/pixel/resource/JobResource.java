@@ -7,15 +7,12 @@ package com.pixel.resource;
 
 import com.pixel.database.MyDBHandler;
 import com.pixel.model.Job;
-import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -32,21 +29,45 @@ import org.jsoup.select.Elements;
  */
 
 @Path("jobs")
-@Produces(MediaType.TEXT_PLAIN)
+@Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class JobResource {
     
     MyDBHandler dbHandler = new MyDBHandler();
     List<Job> jobList;
     
-    // Method to perform regular web scraping for jobs
+    // Method to get jobs from database
     @GET
-    public String scrapeJobs(@Context UriInfo uriInfo) {
+    public List<Job> getJobs(@Context UriInfo uriInfo) {
         MultivaluedMap<String, String> queryParams = uriInfo.getQueryParameters();
         
+        String category = queryParams.getFirst("category");
         String offsetString = queryParams.getFirst("offset");
-        int offset = Integer.valueOf(offsetString);
         
+        int offset;
+        if (offsetString.equals("")) {
+            offset = 0;
+        } else {
+            offset = Integer.parseInt(offsetString);
+        }
+        System.out.println("Offset: " + offset);
+        
+        return dbHandler.getJobs(category, offset);
+    }
+    
+    // Method to get a single job from database
+    @GET
+    @Path("{id}")
+    public Job getJob(@PathParam("id") String id) {
+        int i = Integer.parseInt(id);
+        return dbHandler.getJob(i);
+    }
+    
+    // Method to perform regular web scraping for jobs
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("scrape")
+    public String scrapeJobs(@Context UriInfo uriInfo) {
         List<String> catList = new ArrayList<>();
         catList.add("Informatique");
         catList.add("Engineering");
@@ -138,9 +159,8 @@ public class JobResource {
                             // Move to next pages
                             String numString = doc.select("div.text-right ul.pagination form.pagination-selector "
                                     + "span.pagination-page-number strong").first().text();
-                            System.out.println(numString);
 
-                            int number = Integer.valueOf(numString);
+                            int number = Integer.parseInt(numString);
                             System.out.println(number);
 
                             for (int x = 2; x <= number; x++) {

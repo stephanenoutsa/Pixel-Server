@@ -784,6 +784,118 @@ public class MyDBHandler {
         return jobList;
     }
     
+    // Method to get a single job from the Jobs table
+    public Job getJob(int id) {
+        Job job = new Job();
+        
+        Connection conn = null;
+        Statement db = null;
+        
+        try {
+            // Register JDBC driver
+            Class.forName(JDBC_DRIVER);
+            
+            // Open a connection
+            conn = DriverManager.getConnection(DB_URL, USER, PASS);
+            
+            db = conn.createStatement();
+            
+            String query = "SELECT * FROM " + TABLE_JOBS + " WHERE "
+                    + JOB_COLUMN_ID + " =" + id;
+            ResultSet result = db.executeQuery(query);
+            
+            if (result.next()) {
+                job.setId(id);
+                job.setTitle(result.getString(JOB_COLUMN_TITLE).replace("\"\"", "'"));
+                job.setUrl(result.getString(JOB_COLUMN_URL));
+                job.setCategory(result.getString(JOB_COLUMN_CATEGORY));
+                job.setLocation(result.getString(JOB_COLUMN_LOCATION).replace("\"\"", "'"));
+                job.setDescription(result.getString(JOB_COLUMN_DESC).replace("\"\"", "'"));
+                job.setDatePosted(result.getString(JOB_COLUMN_DATE));
+            }
+            System.out.println("Single job delivered");
+        } catch (SQLException se) {
+            se.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // finally block used to close resources
+            try {
+                if (db != null)
+                    db.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+            try {
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        }
+        
+        return job;
+    }
+    
+    // Method to get a list of jobs from the Jobs table
+    public List<Job> getJobs(String category, int offset) {
+        List<Job> jobList = new ArrayList<>();
+        
+        Connection conn = null;
+        Statement db = null;
+        
+        try {
+            // Register JDBC driver
+            Class.forName(JDBC_DRIVER);
+            
+            // Open a connection
+            conn = DriverManager.getConnection(DB_URL, USER, PASS);
+            
+            db = conn.createStatement();
+            
+            String query = "SELECT * FROM " + TABLE_JOBS + " WHERE " + JOB_COLUMN_CATEGORY
+                    + " = \'" + category + "\' { LIMIT 10 OFFSET " + offset + " }";
+            ResultSet result = db.executeQuery(query);
+            
+            while(result.next()) {
+                Job job = new Job();
+                job.setId(result.getInt(JOB_COLUMN_ID));
+                job.setTitle(result.getString(JOB_COLUMN_TITLE).replace("\"\"", "'"));
+                job.setUrl(result.getString(JOB_COLUMN_URL));
+                job.setCategory(result.getString(JOB_COLUMN_CATEGORY));
+                job.setLocation(result.getString(JOB_COLUMN_LOCATION).replace("\"\"", "'"));
+                job.setDescription(result.getString(JOB_COLUMN_DESC).replace("\"\"", "'"));
+                job.setDatePosted(result.getString(JOB_COLUMN_DATE));
+                
+                jobList.add(job);
+            }
+            // Reverse the order of the list of jobs from last to first
+            Collections.reverse(jobList);
+            
+            System.out.println("List of jobs delivered");
+        } catch (SQLException se) {
+            se.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // finally block used to close resources
+            try {
+                if (db != null)
+                    db.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+            try {
+                if (conn != null)
+                    conn.close();
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        }
+        
+        return jobList;
+    }
+    
     // Method to udpate a USSDJOB
     public boolean updateUssdJob(String content, String category) {
         boolean ok = true;
