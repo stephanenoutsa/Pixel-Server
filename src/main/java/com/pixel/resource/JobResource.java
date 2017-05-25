@@ -251,7 +251,7 @@ public class JobResource {
     }
     
     // Method to scrape web pages from Akwa Jobs website
-    public String scrapeAkwaJobs(Document doc, String category) throws Exception {
+    public String scrapeAkwaJobs(Document doc, String category) {
         String response = "";
         
         Elements container = doc.select("div.col-md-12:gt(2)");
@@ -264,30 +264,110 @@ public class JobResource {
             String description = e.select("p:gt(0)").text();
             description = description.substring(0, description.length() - 10) + "...";
             
-            title = title.replace("'", "\"\"").trim();
-            location = location.replace("'", "\"\"").trim();
-            description = description.replace("'", "\"\"").trim();
-            
-//            title = URLEncoder.encode(title, "UTF-8");
-//            location = URLEncoder.encode(location,"UTF-8");
-//            description = URLEncoder.encode(description, "UTF-8");
+            if (category.equals("")) {
+                String c = e.select("h5 > a[href]").first().text();
+                System.out.println("This category is: " + c);
+                
+                if (c.toLowerCase().contains("informatique") || c.toLowerCase().contains("engineering")
+                        || c.toLowerCase().contains("marketing") || c.toLowerCase().contains("accounting")
+                        || c.toLowerCase().contains("finance") || c.toLowerCase().contains("human resources")
+                        || c.toLowerCase().contains("management")) {
+                } else {
+                    title = title.replace("'", "\"\"").trim();
+                    location = location.replace("'", "\"\"").trim();
+                    description = description.replace("'", "\"\"").trim();
+                    
+                    response += "Date posted: " + posted + "\n"
+                            + "Title: " + title + "\n"
+                            + "URL: " + link + "\n"
+                            + "Category: " + category + "\n"
+                            + "Location: " + location + "\n"
+                            + "Description: " + description + "\n\n";
 
-            response += "Date posted: " + posted + "\n"
-                    + "Title: " + title + "\n"
-                    + "URL: " + link + "\n"
-                    + "Category: " + category + "\n"
-                    + "Location: " + location + "\n"
-                    + "Description: " + description + "\n\n";
-            
-            Job job = new Job(title, link, category, location, description, posted);
-            jobList.add(job);
+                    Job job = new Job(title, link, category, location, description, posted);
+                    jobList.add(job);
+                }
+            } else {
+                title = title.replace("'", "\"\"").trim();
+                location = location.replace("'", "\"\"").trim();
+                description = description.replace("'", "\"\"").trim();
+
+                response += "Date posted: " + posted + "\n"
+                        + "Title: " + title + "\n"
+                        + "URL: " + link + "\n"
+                        + "Category: " + category + "\n"
+                        + "Location: " + location + "\n"
+                        + "Description: " + description + "\n\n";
+
+                Job job = new Job(title, link, category, location, description, posted);
+                jobList.add(job);
+            }
         }
         
         return response;
     }
     
-    // Method to scrape web pages from wikajobs and bueajobs websites
+    // Method to scrape web pages from wikajobs website
     public String scrapeWikaJobs(Document doc, String category) {
+        String response = "";
+        
+        Elements container = doc.select("div.box-list-area");
+        
+        for (Element e : container.select("div.box-list > div.item div.col-md-11")) {
+            String posted = e.select("div span.color-white-mute:eq(2)").text();
+            posted = posted.replace("Posted on: ", "");
+            String title = e.select("h3.no-margin-top > a[href]").text();
+            String link = e.select("h3.no-margin-top > a[href]").attr("href");
+            String location = e.select("div span.color-white-mute:eq(1) a[href]").first().text();
+            String description = e.select("p").text();
+            description = description.substring(0, description.length() - 10) + "...";
+            
+            if (category.equals("")) {
+                String c = e.select("div span.color-white-mute:eq(0) a[href]").first().text();
+                System.out.println("This category is: " + c);
+                
+                if (c.toLowerCase().contains("informatique") || c.toLowerCase().contains("engineering")
+                        || c.toLowerCase().contains("marketing") || c.toLowerCase().contains("accounting")
+                        || c.toLowerCase().contains("finance") || c.toLowerCase().contains("human resources")
+                        || c.toLowerCase().contains("management")) {
+                } else {
+                    title = title.replace("'", "\"\"").trim();
+                    location = location.replace("'", "\"\"").trim();
+                    description = description.replace("'", "\"\"").trim();
+                    
+                    response += "Date posted: " + posted + "\n"
+                            + "Title: " + title + "\n"
+                            + "URL: " + link + "\n"
+                            + "Category: " + category + "\n"
+                            + "Location: " + location + "\n"
+                            + "Description: " + description + "\n\n";
+
+                    Job job = new Job(title, link, category, location, description, posted);
+                    jobList.add(job);
+                }
+            } else {
+                title = title.replace("'", "\"\"").trim();
+                location = location.replace("'", "\"\"").trim();
+                description = description.replace("'", "\"\"").trim();
+
+                response += "Date posted: " + posted + "\n"
+                        + "Title: " + title + "\n"
+                        + "URL: " + link + "\n"
+                        + "Category: " + category + "\n"
+                        + "Location: " + location + "\n"
+                        + "Description: " + description + "\n\n";
+
+                Job job = new Job(title, link, category, location, description, posted);
+                jobList.add(job);
+            }     
+            
+        }
+        
+        return response;
+    }
+    
+    // Method to scrape web pages from bueajobs website
+    public String scrapeBueaJobs(Document doc, String category) {
         String response = "";
         
         Elements container = doc.select("div.col-md-12:gt(0)");
@@ -300,19 +380,45 @@ public class JobResource {
             String description = e.select("p:gt(0)").text();
             description = description.substring(0, description.length() - 10) + "...";
             
-            title = title.replace("'", "\"\"").trim();
-            location = location.replace("'", "\"\"").trim();
-            description = description.replace("'", "\"\"").trim();
+            if (category.equals("")) {
+                String c = e.select("h5 > a[href]").first().text();
+                System.out.println("This category is: " + c);
+                
+                if (c.toLowerCase().contains("informatique") || c.toLowerCase().contains("engineering")
+                        || c.toLowerCase().contains("marketing") || c.toLowerCase().contains("accounting")
+                        || c.toLowerCase().contains("finance") || c.toLowerCase().contains("human resources")
+                        || c.toLowerCase().contains("management")) {
+                    System.out.println("Category already handled");
+                } else {
+                    title = title.replace("'", "\"\"").trim();
+                    location = location.replace("'", "\"\"").trim();
+                    description = description.replace("'", "\"\"").trim();
+                    
+                    response += "Date posted: " + posted + "\n"
+                            + "Title: " + title + "\n"
+                            + "URL: " + link + "\n"
+                            + "Category: " + category + "\n"
+                            + "Location: " + location + "\n"
+                            + "Description: " + description + "\n\n";
 
-            response += "Date posted: " + posted + "\n"
-                    + "Title: " + title + "\n"
-                    + "URL: " + link + "\n"
-                    + "Category: " + category + "\n"
-                    + "Location: " + location + "\n"
-                    + "Description: " + description + "\n\n";
-            
-            Job job = new Job(title, link, category, location, description, posted);
-            jobList.add(job);
+                    Job job = new Job(title, link, category, location, description, posted);
+                    jobList.add(job);
+                }
+            } else {
+                title = title.replace("'", "\"\"").trim();
+                location = location.replace("'", "\"\"").trim();
+                description = description.replace("'", "\"\"").trim();
+
+                response += "Date posted: " + posted + "\n"
+                        + "Title: " + title + "\n"
+                        + "URL: " + link + "\n"
+                        + "Category: " + category + "\n"
+                        + "Location: " + location + "\n"
+                        + "Description: " + description + "\n\n";
+
+                Job job = new Job(title, link, category, location, description, posted);
+                jobList.add(job);
+            }            
         }
         
         return response;
@@ -332,19 +438,45 @@ public class JobResource {
             String description = e.select("div.panel-footer ul.list-inline li.panel-footer-icon-wrapper "
                     + "a.js-company-name").text();
             
-            title = title.replace("'", "\"\"").trim();
-            location = location.replace("'", "\"\"").trim();
-            description = description.replace("'", "\"\"").trim();
+            if (category.equals("")) {
+                String c = e.select("div.panel-footer ul.list-inline li.panel-footer-icon-wrapper:eq(2)").text();
+                System.out.println("This category is: " + c);
+                
+                if (c.toLowerCase().contains("informatique") || c.toLowerCase().contains("engineering")
+                        || c.toLowerCase().contains("marketing") || c.toLowerCase().contains("accounting")
+                        || c.toLowerCase().contains("finance") || c.toLowerCase().contains("human resources")
+                        || c.toLowerCase().contains("management")) {
+                    System.out.println("Category already handled");
+                } else {
+                    title = title.replace("'", "\"\"").trim();
+                    location = location.replace("'", "\"\"").trim();
+                    description = description.replace("'", "\"\"").trim();
+                    
+                    response += "Date posted: " + posted + "\n"
+                            + "Title: " + title + "\n"
+                            + "URL: " + link + "\n"
+                            + "Category: " + category + "\n"
+                            + "Location: " + location + "\n"
+                            + "Description: " + description + "\n\n";
 
-            response += "Date posted: " + posted + "\n"
-                    + "Title: " + title + "\n"
-                    + "URL: " + link + "\n"
-                    + "Category: " + category + "\n"
-                    + "Location: " + location + "\n"
-                    + "Description: " + description + "\n\n";
-            
-            Job job = new Job(title, link, category, location, description, posted);
-            jobList.add(job);
+                    Job job = new Job(title, link, category, location, description, posted);
+                    jobList.add(job);
+                }
+            } else {
+                title = title.replace("'", "\"\"").trim();
+                location = location.replace("'", "\"\"").trim();
+                description = description.replace("'", "\"\"").trim();
+
+                response += "Date posted: " + posted + "\n"
+                        + "Title: " + title + "\n"
+                        + "URL: " + link + "\n"
+                        + "Category: " + category + "\n"
+                        + "Location: " + location + "\n"
+                        + "Description: " + description + "\n\n";
+
+                Job job = new Job(title, link, category, location, description, posted);
+                jobList.add(job);
+            }                        
         }
         
         return response;
